@@ -1,0 +1,240 @@
+---
+title: Display modes
+description: Configure how fzf appears on your screen with fullscreen, height, and tmux popup modes
+---
+
+fzf provides three main display modes to suit different workflows and terminal environments. By default, fzf runs in fullscreen mode, but you can choose alternative modes that better fit your needs.
+
+## Fullscreen mode (default)
+
+By default, fzf opens in fullscreen mode, taking over your entire terminal window. This provides the maximum space for viewing results but hides your command history and context.
+
+```bash
+fzf
+```
+
+## Height mode
+
+With `--height`, fzf starts below the cursor with a specified height, allowing you to see previous commands and their results above it.
+
+### Basic height specification
+
+```bash
+# Use 40% of screen height
+fzf --height 40%
+```
+
+### Combining with layout options
+
+The `--height` option works well with other layout options:
+
+<CodeGroup>
+
+```bash Reverse layout
+fzf --height 40% --layout reverse
+```
+
+```bash With border
+fzf --height 40% --layout reverse --border
+```
+
+```bash Complete setup
+fzf --height 40% --layout reverse --info=inline --border --margin=1 --padding=1
+```
+
+</CodeGroup>
+
+### Dynamic height
+
+You can set a maximum height by prepending `~` to the height value. fzf will take as few lines as possible:
+
+```bash
+# Takes minimal space, up to 100% of screen
+seq 3 | fzf --height ~100%
+
+# With many items, uses up to 100% of screen
+seq 3000 | fzf --height ~100%
+```
+
+### Negative height values
+
+Height can be a negative number, which subtracts from the screen height:
+
+```bash
+# Screen height minus 3 lines
+fzf --height -3
+```
+
+<Tip>
+Add `--height` options to `$FZF_DEFAULT_OPTS` to apply them by default:
+
+```bash
+export FZF_DEFAULT_OPTS="--height 40% --layout reverse --border"
+```
+</Tip>
+
+## Tmux mode
+
+<Note>
+Requires tmux 3.3 or later
+</Note>
+
+With `--tmux`, fzf opens in a tmux popup window. This mode is silently ignored when you're not running inside tmux.
+
+### Basic tmux popup
+
+```bash
+# Center popup with 50% width and height
+fzf --tmux center
+
+# Center popup with 80% width and height
+fzf --tmux 80%
+
+# Center popup with 100% width and 50% height
+fzf --tmux 100%,50%
+```
+
+### Positioning the popup
+
+The `--tmux` option accepts a flexible format:
+
+```
+--tmux [center|top|bottom|left|right][,SIZE[%]][,SIZE[%]]
+```
+
+<Tabs>
+  <Tab title="Horizontal positions">
+    ```bash
+    # Left side, 40% width
+    fzf --tmux left,40%
+
+    # Left side, 40% width, 90% height
+    fzf --tmux left,40%,90%
+
+    # Right side, 50% width (default)
+    fzf --tmux right
+    ```
+  </Tab>
+  <Tab title="Vertical positions">
+    ```bash
+    # Top, 40% height
+    fzf --tmux top,40%
+
+    # Bottom, 80% width, 40% height
+    fzf --tmux bottom,80%,40%
+    ```
+  </Tab>
+  <Tab title="Center position">
+    ```bash
+    # Center, 70% width and height
+    fzf --tmux 70%
+
+    # Center, custom dimensions
+    fzf --tmux center,90%,60%
+    ```
+  </Tab>
+</Tabs>
+
+### Combining height and tmux modes
+
+You can specify both `--height` and `--tmux` to use tmux popups when available and fall back to height mode otherwise:
+
+```bash
+# --tmux takes precedence when on tmux
+# --height is used when not on tmux
+fzf --height 70% --tmux 70%
+```
+
+<Tip>
+Add both options to `$FZF_DEFAULT_OPTS` for a consistent experience:
+
+```bash
+# Open in tmux popup if on tmux, otherwise use --height mode
+export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
+```
+</Tip>
+
+### Alternative: fzf-tmux script
+
+<Info>
+If you're using an old version of tmux that doesn't support popups (< 3.3), you can use the [fzf-tmux](https://github.com/junegunn/fzf/blob/master/bin/fzf-tmux) script to open fzf in a regular tmux pane or window.
+</Info>
+
+## Configuring display modes for shell bindings
+
+You can configure different display modes for each shell key binding:
+
+```bash
+# Configure CTRL-T to use tmux popup
+export FZF_CTRL_T_OPTS='--tmux 80%'
+
+# Configure CTRL-R to use bottom 60% of screen
+export FZF_CTRL_R_OPTS='--tmux bottom,60% --height 60% --border top'
+
+# Configure ALT-C with preview
+export FZF_ALT_C_OPTS='--tmux 80% --preview "tree -C {}"'
+```
+
+These options can also be set globally via `$FZF_DEFAULT_OPTS`, which applies to all fzf invocations.
+
+## Layout presets
+
+fzf provides style presets that work well with different display modes:
+
+<Tabs>
+  <Tab title="Default">
+    ```bash
+    fzf --style default
+    ```
+    Standard appearance with essential UI elements.
+  </Tab>
+  <Tab title="Full">
+    ```bash
+    fzf --style full
+    ```
+    Rich appearance with all visual elements enabled.
+  </Tab>
+  <Tab title="Minimal">
+    ```bash
+    fzf --style minimal
+    ```
+    Clean, minimalist appearance with reduced visual elements.
+  </Tab>
+</Tabs>
+
+## Comparison of display modes
+
+| Mode | Pros | Cons | Best for |
+|------|------|------|----------|
+| **Fullscreen** | Maximum viewing space | Hides context | Large result sets, complex workflows |
+| **Height** | Shows command history | Limited space | Quick file selection, command history |
+| **Tmux** | Overlay without losing context | Requires tmux 3.3+ | Tmux users who want popups |
+
+## Example configurations
+
+<Accordion title="Minimal height mode setup">
+  ```bash
+  export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border'
+  ```
+  
+  This provides a clean, non-intrusive interface that shows your command history.
+</Accordion>
+
+<Accordion title="Tmux-first configuration">
+  ```bash
+  export FZF_DEFAULT_OPTS='--height 50% --tmux center,80%,70% --layout reverse --border rounded'
+  ```
+  
+  Uses tmux popup when available, falls back to height mode otherwise.
+</Accordion>
+
+<Accordion title="Per-binding configuration">
+  ```bash
+  # Different modes for different bindings
+  export FZF_CTRL_T_OPTS='--tmux right,50% --preview "bat --color=always {}"'
+  export FZF_CTRL_R_OPTS='--height 60% --layout reverse --border top'
+  export FZF_ALT_C_OPTS='--tmux 90%,70% --preview "tree -C {} | head -200"'
+  ```
+  
+  Customize each shell binding independently.
+</Accordion>

@@ -1,0 +1,383 @@
+---
+title: Upgrading fzf
+description: Keep your fzf installation up to date with the latest features and bug fixes
+---
+
+fzf is actively developed with regular releases. This guide shows you how to upgrade fzf depending on your installation method.
+
+<Info>
+  Check the [CHANGELOG](https://github.com/junegunn/fzf/blob/master/CHANGELOG.md) to see what's new in each release.
+</Info>
+
+## Check your current version
+
+First, check which version you're running:
+
+```bash
+fzf --version
+```
+
+You can also check the latest available version on the [releases page](https://github.com/junegunn/fzf/releases).
+
+## Upgrade methods
+
+Choose the upgrade method based on how you installed fzf:
+
+<Tabs>
+  <Tab title="Homebrew">
+    ### macOS and Linux
+    
+    ```bash
+    brew update
+    brew upgrade fzf
+    ```
+    
+    To upgrade to a specific version:
+    
+    ```bash
+    brew upgrade fzf@0.68.0
+    ```
+    
+    <Note>
+      Shell integration scripts are updated automatically. Reload your shell to use the new version.
+    </Note>
+  </Tab>
+  
+  <Tab title="Git">
+    ### From source
+    
+    If you installed using the git method:
+    
+    ```bash
+    cd ~/.fzf
+    git pull
+    ./install
+    ```
+    
+    The install script will:
+    - Update the binary
+    - Update shell integration scripts
+    - Preserve your configuration
+    
+    <Tip>
+      To upgrade to a specific version:
+      
+      ```bash
+      cd ~/.fzf
+      git fetch --tags
+      git checkout v0.68.0
+      ./install
+      ```
+    </Tip>
+  </Tab>
+  
+  <Tab title="Linux packages">
+    ### Debian/Ubuntu
+    
+    ```bash
+    sudo apt update
+    sudo apt upgrade fzf
+    ```
+    
+    ### Arch Linux
+    
+    ```bash
+    sudo pacman -Syu fzf
+    ```
+    
+    ### Fedora
+    
+    ```bash
+    sudo dnf upgrade fzf
+    ```
+    
+    ### Alpine Linux
+    
+    ```bash
+    sudo apk upgrade fzf
+    ```
+    
+    ### openSUSE
+    
+    ```bash
+    sudo zypper update fzf
+    ```
+    
+    ### Gentoo
+    
+    ```bash
+    sudo emerge --sync
+    sudo emerge --update app-shells/fzf
+    ```
+    
+    <Warning>
+      Linux packages may not have the latest version immediately. Check your distribution's package repository for availability.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Windows">
+    ### Chocolatey
+    
+    ```powershell
+    choco upgrade fzf
+    ```
+    
+    ### Scoop
+    
+    ```powershell
+    scoop update fzf
+    ```
+    
+    ### Winget
+    
+    ```powershell
+    winget upgrade fzf
+    ```
+  </Tab>
+</Tabs>
+
+## Other installation methods
+
+### MacPorts
+
+```bash
+sudo port selfupdate
+sudo port upgrade fzf
+```
+
+### Mise
+
+```bash
+mise upgrade fzf
+```
+
+To install a specific version:
+
+```bash
+mise use -g fzf@0.68.0
+```
+
+### Conda
+
+```bash
+conda update -c conda-forge fzf
+```
+
+### Vim plugin (vim-plug)
+
+Update fzf within Vim:
+
+```vim
+:PlugUpdate fzf
+```
+
+Or update all plugins:
+
+```vim
+:PlugUpdate
+```
+
+## Upgrading shell integration
+
+If you installed fzf via package managers, shell integration might need manual updates.
+
+<Steps>
+  <Step title="Check shell integration version">
+    The shell integration scripts should be updated automatically with most installation methods. However, if you're experiencing issues, you may need to update manually.
+  </Step>
+  
+  <Step title="Update shell configuration">
+    Make sure your shell configuration uses the correct method:
+    
+    <CodeGroup>
+    ```bash Bash (~/.bashrc)
+    # Modern method (fzf 0.48.0+)
+    eval "$(fzf --bash)"
+    ```
+    
+    ```bash Zsh (~/.zshrc)
+    # Modern method (fzf 0.48.0+)
+    source <(fzf --zsh)
+    ```
+    
+    ```fish Fish (~/.config/fish/config.fish)
+    # Modern method (fzf 0.48.0+)
+    fzf --fish | source
+    ```
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Reload your shell">
+    Apply changes:
+    
+    ```bash
+    # Bash
+    source ~/.bashrc
+    
+    # Zsh
+    source ~/.zshrc
+    
+    # Fish
+    source ~/.config/fish/config.fish
+    ```
+    
+    Or simply open a new terminal window.
+  </Step>
+</Steps>
+
+<Note>
+  If you're using fzf older than 0.48.0, you'll need to source individual scripts from the `/shell` directory. Consider upgrading to a newer version for easier maintenance.
+</Note>
+
+## After upgrading
+
+<Steps>
+  <Step title="Verify the new version">
+    ```bash
+    fzf --version
+    ```
+    
+    Make sure the version number matches what you expected.
+  </Step>
+  
+  <Step title="Test basic functionality">
+    ```bash
+    # Test basic search
+    ls | fzf
+    
+    # Test shell integration (if configured)
+    # Press CTRL-R to test history search
+    # Press CTRL-T to test file search
+    ```
+  </Step>
+  
+  <Step title="Check configuration compatibility">
+    Some releases introduce breaking changes. Review the [CHANGELOG](https://github.com/junegunn/fzf/blob/master/CHANGELOG.md) for your version to see if any of your customizations need updating.
+  </Step>
+</Steps>
+
+## Release highlights
+
+Here are some major features added in recent versions:
+
+### Version 0.68.0 (Current)
+- Word wrapping in list and preview window
+- Underline style variants in colors
+- Fish completion support
+- Multiple bug fixes
+
+### Version 0.67.0
+- `--freeze-left` and `--freeze-right` options
+- Improved inline info with spinner
+
+### Version 0.66.0
+- "Raw" mode for showing non-matching items
+- Unix domain socket support for `--listen`
+- Narrower gutter with new style
+
+### Version 0.60.0
+- `--accept-nth` for choosing output fields
+- Template support with multiple field expressions
+- `exclude` and `exclude-multi` actions
+
+<Card title="View all releases" icon="tag" href="https://github.com/junegunn/fzf/releases">
+  See the complete release history and detailed changelogs
+</Card>
+
+## Troubleshooting
+
+### Old version persists
+
+If `fzf --version` shows an old version after upgrading:
+
+```bash
+# Check which fzf binary is being used
+which fzf
+
+# Check all fzf installations
+which -a fzf
+```
+
+You might have multiple installations. Remove old ones or adjust your `$PATH`.
+
+### Shell integration not working
+
+If key bindings (CTRL-T, CTRL-R, ALT-C) stop working:
+
+1. Make sure shell integration is properly configured
+2. Reload your shell configuration
+3. Check for conflicting key bindings
+4. Verify fzf is in your `$PATH`
+
+```bash
+# Test if fzf is accessible
+command -v fzf
+
+# Check PATH
+echo $PATH
+```
+
+### Vim plugin issues
+
+If the Vim plugin isn't working after upgrade:
+
+```vim
+" Force reinstall the binary
+:call fzf#install()
+
+" Or update the plugin
+:PlugUpdate fzf
+```
+
+## Downgrading
+
+If you encounter issues with a new version, you can downgrade:
+
+<Tabs>
+  <Tab title="Homebrew">
+    ```bash
+    # View available versions
+    brew search fzf
+    
+    # Install specific version
+    brew uninstall fzf
+    brew install fzf@0.67.0
+    ```
+  </Tab>
+  
+  <Tab title="Git">
+    ```bash
+    cd ~/.fzf
+    git checkout v0.67.0
+    ./install
+    ```
+  </Tab>
+  
+  <Tab title="Binary">
+    Download an older binary from the [releases page](https://github.com/junegunn/fzf/releases) and replace your current installation.
+  </Tab>
+</Tabs>
+
+<Warning>
+  After downgrading, make sure to also downgrade or adjust shell integration scripts if they depend on newer features.
+</Warning>
+
+## Staying updated
+
+To stay informed about new releases:
+
+1. **Watch the repository**: Star and watch [junegunn/fzf](https://github.com/junegunn/fzf) on GitHub
+2. **Subscribe to releases**: Get email notifications for new releases
+3. **Follow the changelog**: Check [CHANGELOG.md](https://github.com/junegunn/fzf/blob/master/CHANGELOG.md) regularly
+4. **Release highlights**: Visit [release highlight pages](https://junegunn.github.io/fzf/) for major versions
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/essentials/configuration">
+    Customize your upgraded fzf installation
+  </Card>
+  <Card title="Advanced features" icon="wand-magic-sparkles" href="/essentials/advanced-features">
+    Explore new features added in recent versions
+  </Card>
+</CardGroup>

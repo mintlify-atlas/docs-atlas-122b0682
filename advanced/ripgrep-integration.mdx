@@ -1,0 +1,232 @@
+---
+title: Ripgrep integration
+description: Combine fzf with ripgrep for powerful, interactive text search across files
+---
+
+fzf is fast for filtering lists, but it's not designed for searching text inside many large files. For that, use [ripgrep](https://github.com/BurntSushi/ripgrep). This guide shows you how to combine both tools effectively.
+
+<Note>
+**Prerequisites:**
+- [ripgrep](https://github.com/BurntSushi/ripgrep) - Fast text search tool
+- [bat](https://github.com/sharkdp/bat) - Syntax highlighting for previews
+</Note>
+
+## Using fzf as a secondary filter
+
+In this pattern, ripgrep performs the primary search, and fzf adds interactive filtering on top of the results.
+
+### Basic example
+
+Save this as a script called `rfv` (ripgrep + fzf + vim):
+
+```bash
+#!/usr/bin/env bash
+
+# 1. Search for text in files using Ripgrep
+# 2. Interactively narrow down the list using fzf
+# 3. Open the file in Vim
+rg --color=always --line-number --no-heading --smart-case "${*:-}" |
+  fzf --ansi \
+      --color "hl:-1:underline,hl+:-1:underline:reverse" \
+      --delimiter : \
+      --preview 'bat --color=always {1} --highlight-line {2}' \
+      --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+      --bind 'enter:become(vim {1} +{2})'
+```
+
+Make it executable and run it:
+
+```bash
+chmod +x rfv
+./rfv algo
+```
+
+### How it works
+
+<Steps>
+  <Step title="Ripgrep searches for text">
+    Ripgrep finds all lines containing your search term and outputs them with color codes, line numbers, and file paths.
+    
+    ```
+    src/pattern.go:42:func NewPattern(algo string) *Pattern {
+    src/pattern_test.go:7:import "github.com/junegunn/fzf/src/algo"
+    ```
+  </Step>
+  
+  <Step title="fzf filters interactively">
+    You can further narrow down the ripgrep results using fuzzy matching in fzf.
+  </Step>
+  
+  <Step title="Preview shows context">
+    The preview window displays the file with the matching line highlighted using bat.
+  </Step>
+  
+  <Step title="Enter opens the file">
+    Pressing Enter uses the `become` action to open vim at the correct line number.
+  </Step>
+</Steps>
+
+### Understanding the options
+
+<Tabs>
+  <Tab title="Ripgrep options">
+    - `--color=always` - Preserves syntax highlighting
+    - `--line-number` - Shows line numbers in the output
+    - `--no-heading` - Prints each match on a single line
+    - `--smart-case` - Case-insensitive search unless you use uppercase
+  </Tab>
+  
+  <Tab title="fzf options">
+    - `--ansi` - Tells fzf to parse ANSI color codes from ripgrep
+    - `--delimiter :` - Splits output on `:` so `{1}` is the file, `{2}` is the line number
+    - `--color "hl:-1:underline..."` - Keeps original highlighting from ripgrep
+  </Tab>
+  
+  <Tab title="Preview window">
+    - `up,60%` - Position and size
+    - `border-bottom` - Border only on the bottom
+    - `+{2}+3/3` - Scroll offset: line number + 3 lines / 3 = positions match at 1/3 height
+    - `~3` - Makes top 3 lines fixed header
+  </Tab>
+</Tabs>
+
+## Using fzf as an interactive ripgrep launcher
+
+Instead of running ripgrep once, you can make fzf restart ripgrep every time you change your query. This provides a more integrated experience.
+
+```bash
+#!/usr/bin/env bash
+
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+INITIAL_QUERY="${*:-}"
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --bind "start:reload:$RG_PREFIX {q} || true" \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --delimiter : \
+    --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+    --bind 'enter:become(vim {1} +{2})'
+```
+
+### Key differences
+
+- `--disabled` - Disables fzf's fuzzy matching (ripgrep does all filtering)
+- `start:reload` - Starts ripgrep when fzf opens
+- `change:reload` - Restarts ripgrep whenever you type
+- `sleep 0.1` - Debounces the reload to avoid too many intermediate processes
+- `{q}` - Placeholder for the current query string
+- `|| true` - Prevents errors when ripgrep finds no matches
+
+<Info>
+This mode uses more CPU as ripgrep restarts frequently, but it frees memory as you narrow results and works better on very large codebases.
+</Info>
+
+## Switching between ripgrep and fzf modes
+
+You can combine both approaches, switching between ripgrep mode (fast, exact search) and fzf mode (fuzzy filtering).
+
+```bash
+#!/usr/bin/env bash
+
+# Switch between Ripgrep mode and fzf filtering mode (CTRL-T)
+rm -f /tmp/rg-fzf-{r,f}
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+INITIAL_QUERY="${*:-}"
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --bind "start:reload:$RG_PREFIX {q}" \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --bind 'ctrl-t:transform:[[ ! $FZF_PROMPT =~ ripgrep ]] &&
+      echo "rebind(change)+change-prompt(1. ripgrep> )+disable-search+transform-query:echo \{q} > /tmp/rg-fzf-f; cat /tmp/rg-fzf-r" ||
+      echo "unbind(change)+change-prompt(2. fzf> )+enable-search+transform-query:echo \{q} > /tmp/rg-fzf-r; cat /tmp/rg-fzf-f"' \
+    --color "hl:-1:underline,hl+:-1:underline:reverse" \
+    --prompt '1. ripgrep> ' \
+    --delimiter : \
+    --header 'CTRL-T: Switch between ripgrep/fzf' \
+    --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+    --bind 'enter:become(vim {1} +{2})'
+```
+
+### How the toggle works
+
+<Steps>
+  <Step title="Store state in the prompt">
+    The script uses `$FZF_PROMPT` to track whether you're in ripgrep or fzf mode.
+  </Step>
+  
+  <Step title="Transform action decides">
+    The `transform` action checks the prompt and returns different action chains depending on the current mode.
+  </Step>
+  
+  <Step title="Save and restore queries">
+    When switching modes, the current query is saved to a temp file and the previous query from that mode is restored.
+  </Step>
+  
+  <Step title="Toggle bindings">
+    `rebind(change)` re-enables reload on change, while `unbind(change)` disables it.
+  </Step>
+</Steps>
+
+<Warning>
+When using `transform`, escape the placeholders with backslashes (`\{q}`) to prevent immediate evaluation.
+</Warning>
+
+## Simultaneous search control
+
+You can control both ripgrep and fzf search simultaneously by splitting your query: the first word goes to ripgrep, the rest to fzf.
+
+```bash
+#!/usr/bin/env bash
+
+export TEMP=$(mktemp -u)
+trap 'rm -f "$TEMP"' EXIT
+
+INITIAL_QUERY="${*:-}"
+TRANSFORMER='
+  rg_pat={q:1}      # The first word is passed to ripgrep
+  fzf_pat={q:2..}   # The rest are passed to fzf
+
+  if ! [[ -r "$TEMP" ]] || [[ $rg_pat != $(cat "$TEMP") ]]; then
+    echo "$rg_pat" > "$TEMP"
+    printf "reload:sleep 0.1; rg --column --line-number --no-heading --color=always --smart-case %q || true" "$rg_pat"
+  fi
+  echo "+search:$fzf_pat"
+'
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --with-shell 'bash -c' \
+    --bind "start,change:transform:$TRANSFORMER" \
+    --color "hl:-1:underline,hl+:-1:underline:reverse" \
+    --delimiter : \
+    --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window 'up,60%,border-line,+{2}+3/3,~3' \
+    --bind 'enter:become(vim {1} +{2})'
+```
+
+### Example usage
+
+```bash
+# Search for "function" with ripgrep, then filter for "init" with fzf
+function init
+```
+
+The first word (`function`) runs through ripgrep, while subsequent words (`init`) use fzf's fuzzy matching.
+
+<Tip>
+This approach combines the speed of ripgrep for the initial search with the flexibility of fzf for fuzzy filtering.
+</Tip>
+
+## Best practices
+
+1. **Use `--ansi` only when needed** - It makes initial scanning slower, so only use it when you need to preserve colors from ripgrep.
+
+2. **Add debouncing** - Use `sleep 0.1` in reload commands to reduce the number of intermediate ripgrep processes.
+
+3. **Handle errors gracefully** - Add `|| true` to ripgrep commands so fzf doesn't show warnings when there are no matches.
+
+4. **Consider your use case** - Use the secondary filter pattern for one-off searches, and the launcher pattern for exploratory work.
+
+## Next steps
+
+- Learn about [Preview window](/advanced/preview-window) to enhance your search interface
+- Explore [Dynamic reloading](/advanced/dynamic-reload) for more reload patterns
+- See [Executing programs](/advanced/executing-programs) for more action types

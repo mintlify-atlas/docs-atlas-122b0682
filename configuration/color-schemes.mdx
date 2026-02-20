@@ -1,0 +1,387 @@
+---
+title: Color schemes and theming
+description: Customize fzf colors with built-in themes, custom color schemes, and 24-bit true color support
+---
+
+fzf supports extensive color customization through the `--color` option. You can use built-in color schemes, define custom themes with 24-bit colors, or disable colors entirely.
+
+## Built-in color schemes
+
+fzf includes several base color schemes to match different terminal backgrounds:
+
+<Tabs>
+  <Tab title="dark">
+    Default color scheme for dark terminals (default on 256-color terminals).
+
+    ```bash
+    fzf --color dark
+    ```
+  </Tab>
+  <Tab title="light">
+    Color scheme optimized for light terminals.
+
+    ```bash
+    fzf --color light
+    ```
+  </Tab>
+  <Tab title="base16">
+    Color scheme using base 16 colors (alias: `16`). This is the default on non-256-color terminals.
+
+    ```bash
+    fzf --color base16
+    fzf --color 16
+    ```
+  </Tab>
+  <Tab title="bw">
+    No colors, black and white only (equivalent to `--no-color`).
+
+    ```bash
+    fzf --color bw
+    fzf --no-color
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  If the `NO_COLOR` environment variable is set, fzf defaults to the `bw` scheme.
+</Note>
+
+## Color syntax
+
+The `--color` option accepts a base scheme followed by custom color mappings:
+
+```bash
+fzf --color [BASE_SCHEME][,COLOR_NAME[:ANSI_COLOR][:ATTRIBUTES]]...
+```
+
+### Available color names
+
+fzf provides granular control over individual UI elements:
+
+<ParamField path="fg" type="color">
+  Text color
+
+  - `list-fg` - Text in the list section
+    - `selected-fg` - Selected line text
+  - `preview-fg` - Preview window text
+</ParamField>
+
+<ParamField path="bg" type="color">
+  Background color
+
+  - `list-bg` - List section background
+    - `selected-bg` - Selected line background
+  - `preview-bg` - Preview window background
+  - `input-bg` - Input window background
+  - `header-bg` - Header window background
+  - `footer-bg` - Footer window background
+</ParamField>
+
+<ParamField path="hl" type="color">
+  Highlighted substrings (matched text)
+
+  - `selected-hl` - Highlighted substrings in selected line
+</ParamField>
+
+<ParamField path="current-fg (fg+)" type="color">
+  Text color for current line (cursor position)
+</ParamField>
+
+<ParamField path="current-bg (bg+)" type="color">
+  Background color for current line
+
+  - `gutter` - Gutter on the left of the current line
+</ParamField>
+
+<ParamField path="current-hl (hl+)" type="color">
+  Highlighted substrings in current line
+</ParamField>
+
+<ParamField path="query (input-fg)" type="color">
+  Query string text
+
+  - `ghost` - Ghost text (hint text, `dim` applied by default)
+  - `disabled` - Query string when search is disabled
+</ParamField>
+
+<ParamField path="info" type="color">
+  Info line showing match counters
+</ParamField>
+
+<ParamField path="border" type="color">
+  Border around windows
+
+  - `list-border` - Border around list section
+    - `scrollbar` - Scrollbar
+    - `separator` - Horizontal separator on info line
+    - `gap-line` - Horizontal line on gaps
+  - `preview-border` - Border around preview window
+    - `preview-scrollbar` - Preview scrollbar
+  - `input-border` - Border around input window
+  - `header-border` - Border around header window
+  - `footer-border` - Border around footer window
+</ParamField>
+
+<ParamField path="label" type="color">
+  Border labels
+
+  - `list-label` - List section label
+  - `preview-label` - Preview window label
+  - `input-label` - Input window label
+  - `header-label` - Header window label
+  - `footer-label` - Footer window label
+</ParamField>
+
+<ParamField path="prompt" type="color">
+  Input prompt character
+</ParamField>
+
+<ParamField path="pointer" type="color">
+  Pointer to the current line
+</ParamField>
+
+<ParamField path="marker" type="color">
+  Multi-select marker
+</ParamField>
+
+<ParamField path="spinner" type="color">
+  Streaming input indicator
+</ParamField>
+
+## Color values
+
+You can specify colors using multiple formats:
+
+### ANSI colors
+
+```bash
+# Use color index -1 for default terminal color
+fzf --color fg:-1,bg:-1
+
+# Use 16 base colors (0-15)
+fzf --color fg:15,bg:0
+
+# Use 256 color palette
+fzf --color fg:252,bg:237
+
+# Use named colors
+fzf --color fg:white,bg:black
+fzf --color prompt:bright-blue,pointer:bright-red
+```
+
+Available named colors:
+- `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white`
+- `bright-black` (aliases: `gray`, `grey`)
+- `bright-red`, `bright-green`, `bright-yellow`, `bright-blue`, `bright-magenta`, `bright-cyan`, `bright-white`
+
+### 24-bit RGB colors
+
+For true color support, use hex color codes:
+
+```bash
+fzf --color fg:#D9D9D9,bg:#4B4B4B
+```
+
+<Note>
+  You need a terminal emulator that supports 24-bit colors for RGB values to work correctly.
+</Note>
+
+### Special value: -1
+
+The value `-1` tells fzf to use the default terminal color or keep the original color from the input:
+
+```bash
+fzf --color fg:-1,hl:-1:underline
+```
+
+## Text attributes
+
+You can apply text attributes to foreground colors:
+
+```bash
+# Single attribute
+fzf --color fg:bold
+fzf --color prompt:underline
+
+# Multiple attributes (color:attribute:attribute)
+fzf --color hl:bright-yellow:bold:underline
+```
+
+Available attributes:
+- `regular` - Clear previously set attributes (should precede others)
+- `strip` - Remove colors
+- `bold`
+- `underline`
+- `underline-double`
+- `underline-curly`
+- `underline-dashed`
+- `underline-dotted`
+- `reverse`
+- `dim`
+- `italic`
+- `strikethrough`
+
+<Tip>
+  The `regular` attribute is useful when you want to clear inherited styling:
+
+  ```bash
+  fzf --color fg:dim,hl:regular:bold
+  ```
+</Tip>
+
+## Popular color themes
+
+Here are some popular color themes you can use as starting points:
+
+### Seoul256 (dark)
+
+```bash
+export FZF_DEFAULT_OPTS='--color=bg+:#3F3F3F,bg:#4B4B4B,border:#6B6B6B,spinner:#98BC99,hl:#719872,fg:#D9D9D9,header:#719872,info:#BDBB72,pointer:#E12672,marker:#E17899,fg+:#D9D9D9,preview-bg:#3F3F3F,prompt:#98BEDE,hl+:#98BC99'
+```
+
+A refined dark theme based on the Seoul256 Vim color scheme.
+
+### Seoul256 (light)
+
+```bash
+export FZF_DEFAULT_OPTS='--color=bg+:#D9D9D9,bg:#E1E1E1,border:#C8C8C8,spinner:#719899,hl:#719872,fg:#616161,header:#719872,info:#727100,pointer:#E12672,marker:#E17899,fg+:#616161,preview-bg:#D9D9D9,prompt:#0099BD,hl+:#719899'
+```
+
+Light variant of the Seoul256 theme.
+
+### Gruvbox
+
+```bash
+export FZF_DEFAULT_OPTS='--color=bg+:#3c3836,bg:#32302f,spinner:#fb4934,hl:#928374,fg:#ebdbb2,header:#928374,info:#8ec07c,pointer:#fb4934,marker:#fb4934,fg+:#ebdbb2,prompt:#fb4934,hl+:#fb4934'
+```
+
+Warm, retro groove color scheme.
+
+### Nord
+
+```bash
+export FZF_DEFAULT_OPTS='--color=bg+:#3B4252,bg:#2E3440,spinner:#81A1C1,hl:#616E88,fg:#D8DEE9,header:#616E88,info:#81A1C1,pointer:#81A1C1,marker:#81A1C1,fg+:#D8DEE9,prompt:#81A1C1,hl+:#81A1C1'
+```
+
+Arctic, north-bluish color palette.
+
+### Molokai
+
+```bash
+export FZF_DEFAULT_OPTS='--color=bg+:#293739,bg:#1B1D1E,border:#808080,spinner:#E6DB74,hl:#7E8E91,fg:#F8F8F2,header:#7E8E91,info:#A6E22E,pointer:#A6E22E,marker:#F92672,fg+:#F8F8F2,prompt:#F92672,hl+:#F92672'
+```
+
+Smooth color scheme based on Molokai.
+
+## Multi-line color definitions
+
+For readability, you can use whitespace-separated entries instead of commas:
+
+```bash
+export FZF_DEFAULT_OPTS='--color=
+  fg:#616161 fg+:#616161
+  bg:#ffffff bg+:#e9e9e9 alt-bg:#f1f1f1
+  hl:#719872 hl+:#719899
+  pointer:#e12672 marker:#e17899
+  header:#719872
+  spinner:#719899 info:#727100
+  prompt:#0099bd query:#616161
+  border:#e1e1e1
+'
+```
+
+<Info>
+  This format is especially useful when using `FZF_DEFAULT_OPTS_FILE` to manage your configuration in a separate file.
+</Info>
+
+## Section-specific colors
+
+With the `full` style, you can color different sections independently:
+
+```bash
+fzf --style full \
+    --color 'border:#aaaaaa,label:#cccccc' \
+    --color 'preview-border:#9999cc,preview-label:#ccccff' \
+    --color 'list-border:#669966,list-label:#99cc99' \
+    --color 'input-border:#996666,input-label:#ffcccc' \
+    --color 'header-border:#6699cc,header-label:#99ccff'
+```
+
+This creates visual separation between:
+- List section (green theme)
+- Preview section (blue theme)
+- Input section (red theme)
+- Header section (cyan theme)
+
+## Striped list background
+
+Create alternating row colors for better readability:
+
+```bash
+fzf --color bg:237,alt-bg:238,current-bg:236
+```
+
+The `alt-bg` color creates the striped effect, while `current-bg` highlights the cursor position.
+
+## fzf theme playground
+
+You can use the interactive [fzf Theme Playground](https://vitormv.github.io/fzf-themes/) to visually create and test color schemes.
+
+The playground allows you to:
+- Preview colors in real-time
+- Experiment with different color combinations
+- Export the final `--color` option string
+- Test both dark and light themes
+
+## Generating themes from Vim
+
+If you use Vim, the fzf Vim plugin can generate color themes from your current Vim color scheme:
+
+```vim
+" Define color mapping
+let g:fzf_colors =
+\ { 'fg':         ['fg', 'Normal'],
+  \ 'bg':         ['bg', 'Normal'],
+  \ 'preview-bg': ['bg', 'NormalFloat'],
+  \ 'hl':         ['fg', 'Comment'],
+  \ 'fg+':        ['fg', 'CursorLine', 'CursorColumn', 'Normal'],
+  \ 'bg+':        ['bg', 'CursorLine', 'CursorColumn'],
+  \ 'hl+':        ['fg', 'Statement'],
+  \ 'info':       ['fg', 'PreProc'],
+  \ 'border':     ['fg', 'Ignore'],
+  \ 'prompt':     ['fg', 'Conditional'],
+  \ 'pointer':    ['fg', 'Exception'],
+  \ 'marker':     ['fg', 'Keyword'],
+  \ 'spinner':    ['fg', 'Label'],
+  \ 'header':     ['fg', 'Comment'] }
+
+" View generated options
+:echo fzf#wrap()
+
+" Append to file
+:call append('$', printf('export FZF_DEFAULT_OPTS="%s"', matchstr(fzf#wrap().options, "--color[^']*")))
+```
+
+This approach ensures your fzf colors match your Vim environment.
+
+## Debugging colors
+
+To test your color scheme, try this command:
+
+```bash
+printf '\e[31mRed\e[0m\n\e[32mGreen\e[0m\n\e[34mBlue\e[0m\n' | \
+  fzf --ansi --color fg:bright-white,hl:bright-yellow:bold
+```
+
+This displays ANSI-colored text in fzf, allowing you to verify that:
+- Your terminal supports the colors you're using
+- The `--ansi` option works correctly
+- Your color scheme looks as expected
+
+<Warning>
+  When using `--ansi` with colored input, make sure to set appropriate colors for `fg` and `hl` that provide good contrast with the input colors. Using `-1` for these can help preserve the original colors:
+
+  ```bash
+  fzf --ansi --color fg:-1,hl:-1:underline
+  ```
+</Warning>

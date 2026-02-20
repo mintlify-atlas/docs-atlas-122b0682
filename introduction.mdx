@@ -1,0 +1,184 @@
+---
+title: Introduction to fzf
+description: A powerful command-line fuzzy finder for interactive filtering and searching
+---
+
+fzf is a general-purpose command-line fuzzy finder that revolutionizes how you work with lists, files, command history, processes, and more in your terminal.
+
+<img src="https://raw.githubusercontent.com/junegunn/i/master/fzf-preview.png" alt="fzf preview" />
+
+## What is fzf?
+
+fzf is an interactive filter program for any kind of list. It implements a "fuzzy" matching algorithm, allowing you to quickly type patterns with omitted characters and still get the results you want. Think of it as an interactive version of grep, but much more powerful.
+
+```bash
+# Find and open a file
+vim $(fzf)
+
+# Kill a process interactively
+ps -ef | fzf | awk '{print $2}' | xargs kill -9
+
+# Search command history
+history | fzf
+```
+
+## Key highlights
+
+<CardGroup cols={2}>
+  <Card title="Portable" icon="box">
+    Distributed as a single binary for easy installation across all platforms
+  </Card>
+  <Card title="Fast" icon="bolt">
+    Optimized to process millions of items instantly with efficient algorithms
+  </Card>
+  <Card title="Versatile" icon="wand-magic-sparkles">
+    Fully customizable through an event-action binding mechanism
+  </Card>
+  <Card title="All-inclusive" icon="puzzle-piece">
+    Comes with integrations for Bash, Zsh, Fish, Vim, and Neovim
+  </Card>
+</CardGroup>
+
+## How it works
+
+fzf reads a list of items from standard input, allows you to select items interactively, and writes the selected ones to standard output. It's designed to work seamlessly with Unix pipes:
+
+```bash
+# List files and select one
+find * -type f | fzf
+
+# Browse git commits
+git log --oneline | fzf
+
+# Search through processes
+ps aux | fzf
+```
+
+## Core features
+
+### Fuzzy matching
+
+Type partial strings and fzf will find matches even if characters are missing:
+
+```bash
+# Typing "rdme" will match "README.md"
+# Typing "dcfg" will match "docker-config.yml"
+find . -type f | fzf
+```
+
+### Advanced search syntax
+
+fzf supports multiple search modes for precise filtering:
+
+| Token | Match type | Description |
+| --- | --- | --- |
+| `sbtrkt` | fuzzy-match | Items that match `sbtrkt` |
+| `'wild` | exact-match | Items that include `wild` |
+| `^music` | prefix-exact-match | Items that start with `music` |
+| `.mp3$` | suffix-exact-match | Items that end with `.mp3` |
+| `!fire` | inverse-exact-match | Items that do not include `fire` |
+
+### Preview window
+
+See file contents, command output, or any preview while you search:
+
+```bash
+# Preview file contents with bat
+fzf --preview 'bat --color=always {}'
+
+# Preview directory structure
+fd --type d | fzf --preview 'tree -C {}'
+```
+
+### Multi-selection
+
+Select multiple items using TAB and process them all:
+
+```bash
+# Select multiple files to delete
+find . -type f | fzf --multi | xargs rm
+
+# Select multiple git branches to delete
+git branch | fzf --multi | xargs git branch -d
+```
+
+## Display modes
+
+fzf offers flexible display options to fit your workflow:
+
+### Fullscreen mode (default)
+
+Perfect for focused searching through large lists.
+
+### Height mode
+
+Stay in context by showing fzf below your cursor:
+
+```bash
+fzf --height 40% --layout reverse --border
+```
+
+### Tmux popup mode
+
+Integrate seamlessly with tmux:
+
+```bash
+# Center popup, 80% width and height
+fzf --tmux 80%
+
+# Side panel
+fzf --tmux right,40%
+```
+
+## Get started
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install fzf on your system using your preferred package manager
+  </Card>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Get up and running with fzf in under 5 minutes
+  </Card>
+  <Card title="Shell integration" icon="terminal" href="/quickstart#shell-integration">
+    Set up key bindings and fuzzy completion for your shell
+  </Card>
+  <Card title="Upgrading" icon="arrow-up" href="/upgrading">
+    Keep your fzf installation up to date
+  </Card>
+</CardGroup>
+
+## Use cases
+
+fzf excels at many common tasks:
+
+- **File navigation**: Quickly find and open files in large codebases
+- **Command history**: Search through your shell history with CTRL-R
+- **Git workflows**: Browse commits, branches, and files interactively
+- **Process management**: Find and manage running processes
+- **Log analysis**: Filter and search through log files in real-time
+- **Directory jumping**: Navigate your filesystem efficiently
+- **Custom scripts**: Build powerful interactive tools
+
+## Performance
+
+fzf is built for speed. It can handle millions of items instantly thanks to its efficient implementation in Go and optimized algorithms. Whether you're searching through:
+
+- Large file trees
+- Years of command history
+- Massive log files
+- Extensive process lists
+
+fzf remains responsive and fast.
+
+## Community and ecosystem
+
+fzf has a thriving ecosystem of integrations and extensions:
+
+- **Editor plugins**: Vim, Neovim, Emacs, VS Code
+- **Shell enhancements**: Custom completion scripts, directory jumpers
+- **Git tools**: Interactive commit browsers, branch managers
+- **Development tools**: Project switchers, test runners
+
+<Card title="Related projects" icon="link" href="https://github.com/junegunn/fzf/wiki/Related-projects">
+  Explore the extensive list of fzf-powered tools and integrations
+</Card>

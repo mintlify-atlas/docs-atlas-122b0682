@@ -1,0 +1,711 @@
+---
+title: Frequently asked questions
+description: Common questions and answers about fzf
+---
+
+Find answers to common questions about fzf installation, usage, and configuration.
+
+## General
+
+<AccordionGroup>
+  <Accordion title="What is fzf?">
+    fzf is a general-purpose command-line fuzzy finder. It's an interactive filter program for any kind of list — files, command history, processes, hostnames, bookmarks, git commits, and more.
+
+    **Key features:**
+    - **Portable** — Distributed as a single binary
+    - **Fast** — Processes millions of items instantly
+    - **Versatile** — Fully customizable through event-action bindings
+    - **All-inclusive** — Shell integration for Bash, Zsh, and Fish
+  </Accordion>
+
+  <Accordion title="How does fzf differ from other fuzzy finders?">
+    fzf stands out for several reasons:
+
+    - **Single binary**: Easy to install and distribute
+    - **Performance**: Optimized to handle millions of items
+    - **Flexibility**: Works as a Unix filter with any list
+    - **Rich feature set**: Advanced preview, reload, and action bindings
+    - **Active development**: Regular updates and improvements
+    - **Strong ecosystem**: Vim/Neovim plugins, shell integrations, and community tools
+  </Accordion>
+
+  <Accordion title="What is fuzzy matching?">
+    Fuzzy matching lets you find items without typing the exact pattern. You can quickly type patterns with omitted characters and still get the results you want.
+
+    For example, to find `README.md`:
+    - Type `rdme` → matches README.md
+    - Type `rm.md` → matches README.md
+    - Type `reme` → matches README.md
+
+    The fuzzy matching algorithm ranks results by relevance, putting the best matches at the top.
+  </Accordion>
+
+  <Accordion title="Is fzf only for files?">
+    No! fzf is a general-purpose text filter that works with any list. Common uses:
+
+    - **Files**: `find . | fzf`
+    - **Processes**: `ps -ef | fzf`
+    - **Git commits**: `git log --oneline | fzf`
+    - **Command history**: Built-in with CTRL-R
+    - **Kubernetes pods**: `kubectl get pods | fzf`
+    - **Custom data**: Any program that outputs text
+
+    ```sh
+    # Any list works
+    echo -e "apple\nbanana\ncherry" | fzf
+    ```
+  </Accordion>
+
+  <Accordion title="Can I use fzf in scripts?">
+    Yes! fzf reads from stdin and writes to stdout, making it perfect for scripts:
+
+    ```sh
+    #!/bin/bash
+    selected=$(find . -type f | fzf)
+    if [ -n "$selected" ]; then
+      echo "You selected: $selected"
+    fi
+    ```
+
+    Use `--print0` and `xargs -0` for robust handling:
+    ```sh
+    fzf --print0 | xargs -0 -o vim
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Installation and setup
+
+<AccordionGroup>
+  <Accordion title="How do I install fzf?">
+    Multiple installation methods are available:
+
+    **Package managers (recommended):**
+    ```sh
+    # macOS
+    brew install fzf
+
+    # Ubuntu/Debian
+    sudo apt install fzf
+
+    # Arch Linux
+    sudo pacman -S fzf
+
+    # Fedora
+    sudo dnf install fzf
+    ```
+
+    **Git clone:**
+    ```sh
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install
+    ```
+
+    **Binary releases:**
+
+    Download from [GitHub releases](https://github.com/junegunn/fzf/releases) and place in your `$PATH`.
+
+    <Note>
+      After installation via package manager, you need to set up shell integration separately.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How do I set up shell integration?">
+    Shell integration provides key bindings (CTRL-T, CTRL-R, ALT-C) and fuzzy completion.
+
+    Add to your shell configuration file:
+
+    **Bash** (`~/.bashrc`):
+    ```sh
+    eval "$(fzf --bash)"
+    ```
+
+    **Zsh** (`~/.zshrc`):
+    ```sh
+    source <(fzf --zsh)
+    ```
+
+    **Fish** (`~/.config/fish/config.fish`):
+    ```fish
+    fzf --fish | source
+    ```
+
+    Then reload your shell or run:
+    ```sh
+    source ~/.bashrc  # or ~/.zshrc
+    ```
+
+    <Info>
+      These options require fzf 0.48.0 or later. For older versions, source individual scripts from the `/shell` directory.
+    </Info>
+  </Accordion>
+
+  <Accordion title="How do I upgrade fzf?">
+    Upgrade method depends on installation method:
+
+    ```sh
+    # Homebrew
+    brew update && brew upgrade fzf
+
+    # APT (Debian/Ubuntu)
+    sudo apt update && sudo apt upgrade fzf
+
+    # Git installation
+    cd ~/.fzf && git pull && ./install
+
+    # vim-plug
+    :PlugUpdate fzf
+    ```
+  </Accordion>
+
+  <Accordion title="Do I need to install anything else?">
+    fzf works out of the box, but these optional tools enhance functionality:
+
+    **For better file traversal:**
+    - [fd](https://github.com/sharkdp/fd) - Fast alternative to find
+    - [ripgrep](https://github.com/BurntSushi/ripgrep) - Fast text search
+
+    **For better previews:**
+    - [bat](https://github.com/sharkdp/bat) - Syntax-highlighted cat
+    - [tree](https://gitlab.com/OldManProgrammer/unix-tree) - Directory tree viewer
+
+    **For image previews:**
+    - Terminal with Kitty graphics protocol, iTerm2 inline images, or Sixel support
+
+    These are all optional — fzf works fine without them.
+  </Accordion>
+</AccordionGroup>
+
+## Configuration
+
+<AccordionGroup>
+  <Accordion title="How do I change the default options?">
+    Use the `FZF_DEFAULT_OPTS` environment variable:
+
+    ```sh
+    export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border'
+    ```
+
+    Or store options in a file:
+    ```sh
+    export FZF_DEFAULT_OPTS_FILE=~/.fzfrc
+    ```
+
+    Then put your options in `~/.fzfrc`:
+    ```
+    --height 40%
+    --layout reverse
+    --border
+    --preview 'bat --color=always {}'
+    ```
+
+    <Warning>
+      Don't add `--preview` to `FZF_DEFAULT_OPTS` as it won't work with non-file inputs like `ps -ef | fzf`.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="How do I change the default command?">
+    Set `FZF_DEFAULT_COMMAND` to customize what fzf shows when no input is piped:
+
+    ```sh
+    # Use fd instead of find
+    export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix'
+
+    # Include hidden files, exclude .git
+    export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+
+    # Use ripgrep for files
+    export FZF_DEFAULT_COMMAND='rg --files'
+    ```
+
+    <Note>
+      `FZF_DEFAULT_COMMAND` is **not** used by shell key bindings (CTRL-T, ALT-C). Use `FZF_CTRL_T_COMMAND` and `FZF_ALT_C_COMMAND` for those.
+    </Note>
+  </Accordion>
+
+  <Accordion title="How do I customize CTRL-T, CTRL-R, and ALT-C?">
+    Use these environment variables:
+
+    **CTRL-T** (file and directory finder):
+    ```sh
+    export FZF_CTRL_T_COMMAND='fd --type f'
+    export FZF_CTRL_T_OPTS="
+      --preview 'bat -n --color=always {}'
+      --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+    ```
+
+    **CTRL-R** (command history):
+    ```sh
+    export FZF_CTRL_R_OPTS="
+      --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+      --header 'Press CTRL-Y to copy command'"
+    ```
+
+    **ALT-C** (directory navigator):
+    ```sh
+    export FZF_ALT_C_COMMAND='fd --type d'
+    export FZF_ALT_C_OPTS="--preview 'tree -C {}'"
+    ```
+
+    **Disable a binding:**
+    ```sh
+    export FZF_ALT_C_COMMAND=''  # Disables ALT-C
+    ```
+  </Accordion>
+
+  <Accordion title="How do I change the key bindings?">
+    You can't change the shell integration keys (CTRL-T, CTRL-R, ALT-C) directly, but you can:
+
+    **Option 1**: Disable the default and create your own:
+    ```sh
+    export FZF_CTRL_T_COMMAND=''  # Disable default
+
+    # Create custom binding
+    bind '"\C-f": "$(fzf)\e\C-e\er"'  # CTRL-F instead
+    ```
+
+    **Option 2**: Within fzf, customize using `--bind`:
+    ```sh
+    fzf --bind 'ctrl-d:page-down,ctrl-u:page-up'
+    ```
+
+    See the man page for all available actions: `fzf --man`
+  </Accordion>
+
+  <Accordion title="How do I change colors?">
+    Use the `--color` option:
+
+    ```sh
+    # Basic
+    fzf --color fg:white,bg:black
+
+    # Comprehensive theme
+    export FZF_DEFAULT_OPTS='--color=bg+:#3F3F3F,bg:#4B4B4B,border:#6B6B6B,spinner:#98BC99,hl:#719872,fg:#D9D9D9'
+    ```
+
+    <Tip>
+      Use the [fzf Theme Playground](https://vitormv.github.io/fzf-themes/) to create themes interactively.
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## Usage
+
+<AccordionGroup>
+  <Accordion title="What are the basic key bindings?">
+    **Navigation:**
+    - `CTRL-K` / `CTRL-J` (or `CTRL-P` / `CTRL-N`) - Move up/down
+    - `CTRL-D` / `CTRL-U` - Page down/up
+    - `Arrow keys` - Move up/down
+
+    **Selection:**
+    - `Enter` - Select item and exit
+    - `TAB` - Mark multiple items (in multi-select mode `-m`)
+    - `Shift-TAB` - Unmark items
+    - `CTRL-A` - Select all
+    - `CTRL-D` - Deselect all
+
+    **Exit:**
+    - `ESC` / `CTRL-C` / `CTRL-G` - Cancel and exit
+
+    **Search:**
+    - `CTRL-/` - Toggle line wrapping
+    - `ALT-/` - Toggle word wrapping
+
+    All bindings are customizable with `--bind`.
+  </Accordion>
+
+  <Accordion title="What's the difference between fuzzy, exact, and prefix matching?">
+    fzf supports multiple match types:
+
+    | Pattern | Match type | Description |
+    |---------|------------|-------------|
+    | `sbtrkt` | fuzzy | Items that match `sbtrkt` |
+    | `'wild` | exact | Items that include `wild` (quoted) |
+    | `^music` | prefix | Items that start with `music` |
+    | `.mp3$` | suffix | Items that end with `.mp3` |
+    | `!fire` | inverse | Items that do NOT include `fire` |
+
+    **Examples:**
+    ```
+    # Fuzzy: matches "README.md"
+    rdme
+
+    # Exact: matches only lines with exact "Read"
+    'Read
+
+    # Prefix: matches lines starting with "src/"
+    ^src/
+
+    # Suffix: matches files ending in ".js"
+    .js$
+
+    # Inverse: excludes lines with "test"
+    !test
+    ```
+
+    Use `-e` or `--exact` to disable fuzzy matching by default.
+  </Accordion>
+
+  <Accordion title="How do I use OR logic in searches?">
+    Use the pipe character `|` for OR operations:
+
+    ```
+    # Matches lines starting with "core" AND ending with "go", "rb", or "py"
+    ^core go$ | rb$ | py$
+    ```
+
+    You can combine with other match types:
+    ```
+    # Files in src/ OR test/ directories
+    ^src/ | ^test/
+    ```
+  </Accordion>
+
+  <Accordion title="How do I select multiple items?">
+    Use the `-m` or `--multi` flag:
+
+    ```sh
+    # Select multiple files
+    find . -type f | fzf -m
+
+    # Select multiple processes to kill
+    ps -ef | fzf -m | awk '{print $2}' | xargs kill -9
+    ```
+
+    **In multi-select mode:**
+    - `TAB` - Mark item
+    - `Shift-TAB` - Unmark item
+    - `CTRL-A` - Select all
+    - `{+}` placeholder expands to all selected items
+
+    ```sh
+    # Open multiple files
+    fzf -m --bind 'enter:become(vim {+})'
+    ```
+  </Accordion>
+
+  <Accordion title="What's the difference between execute and become?">
+    Both run external commands, but they behave differently:
+
+    **`execute`** - Runs command and returns to fzf:
+    ```sh
+    fzf --bind 'f1:execute(less -f {})'
+    # Press F1 to view file, then return to fzf
+    ```
+
+    **`execute-silent`** - Same but without showing output:
+    ```sh
+    fzf --bind 'ctrl-y:execute-silent(echo {} | pbcopy)'
+    # Copy to clipboard silently
+    ```
+
+    **`become`** - Turns fzf into a new process (replaces fzf):
+    ```sh
+    fzf --bind 'enter:become(vim {})'
+    # Opens vim and exits fzf
+    ```
+
+    `become` advantages:
+    - No empty file on CTRL-C
+    - No empty file on empty result
+    - Better handling of multiple selections with spaces
+  </Accordion>
+
+  <Accordion title="How do I preview files?">
+    Use the `--preview` option:
+
+    ```sh
+    # Basic preview with cat
+    fzf --preview 'cat {}'
+
+    # Syntax highlighting with bat
+    fzf --preview 'bat --color=always {}'
+
+    # Show file type
+    fzf --preview 'file {}'
+
+    # Different command for files vs directories
+    fzf --preview '[[ -f {} ]] && bat --color=always {} || tree -C {}'
+    ```
+
+    **Preview window options:**
+    ```sh
+    fzf --preview 'bat {}' --preview-window right:50%
+    fzf --preview 'bat {}' --preview-window up:60%:wrap
+    fzf --preview 'bat {}' --preview-window hidden  # Hidden by default
+    ```
+
+    **Toggle preview:**
+    ```sh
+    fzf --preview 'bat {}' --bind 'ctrl-/:toggle-preview'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Advanced topics
+
+<AccordionGroup>
+  <Accordion title="How do I reload the list dynamically?">
+    Use the `reload` action:
+
+    ```sh
+    # Reload process list with CTRL-R
+    ps -ef | fzf --bind 'ctrl-r:reload(ps -ef)'
+
+    # Reload on every query change
+    fzf --bind 'change:reload(rg {q})'
+
+    # Switch between sources
+    find . | fzf \
+      --bind 'ctrl-d:reload(find . -type d)' \
+      --bind 'ctrl-f:reload(find . -type f)'
+    ```
+
+    The `reload` action is powerful for creating interactive search tools.
+  </Accordion>
+
+  <Accordion title="What is the difference between --disabled and regular mode?">
+    **Regular mode**: fzf does the filtering
+    ```sh
+    rg pattern | fzf  # fzf fuzzy filters ripgrep results
+    ```
+
+    **Disabled mode** (`--disabled`): External tool does the filtering
+    ```sh
+    fzf --disabled --bind 'change:reload(rg {q})'
+    # ripgrep filters, fzf just displays results
+    ```
+
+    Use `--disabled` when:
+    - The external tool (like ripgrep) is faster for your use case
+    - You want exact matching instead of fuzzy
+    - You're searching through very large datasets
+  </Accordion>
+
+  <Accordion title="What are schemes and when should I use them?">
+    Schemes optimize fzf's algorithm for different input types:
+
+    | Scheme | Use for |
+    |--------|--------|
+    | `--scheme=default` | General input (default) |
+    | `--scheme=path` | File paths |
+    | `--scheme=history` | Command history or chronological data |
+
+    ```sh
+    # For file paths
+    fd | fzf --scheme=path
+
+    # For command history
+    history | fzf --scheme=history
+    ```
+
+    Most users don't need to worry about schemes — the default works well.
+  </Accordion>
+
+  <Accordion title="How do I make fzf open in tmux popup?">
+    Use the `--tmux` option (requires tmux 3.3+):
+
+    ```sh
+    # Center popup, 70% size
+    fzf --tmux 70%
+
+    # Bottom, 100% width, 60% height
+    fzf --tmux bottom,100%,60%
+
+    # Left side, 40% width
+    fzf --tmux left,40%
+    ```
+
+    **Fallback to height mode when not in tmux:**
+    ```sh
+    export FZF_DEFAULT_OPTS='--height 40% --tmux 70%'
+    ```
+
+    This uses tmux popup when available, otherwise uses height mode.
+  </Accordion>
+
+  <Accordion title="What is raw mode?">
+    Raw mode (added in fzf 0.66.0) shows all items but dims non-matching ones:
+
+    ```sh
+    # Enable raw mode
+    fzf --raw
+
+    # Toggle with ALT-R
+    fzf --bind alt-r:toggle-raw
+    ```
+
+    **Use cases:**
+    - See context around matching items
+    - Navigate through a list while filtering
+    - Keep the original order visible
+
+    In raw mode:
+    - Non-matching items stay in place but appear dimmed
+    - Use `up-match` / `down-match` to navigate only matches
+    - CTRL-N and CTRL-P now bound to `down-match` and `up-match`
+  </Accordion>
+
+  <Accordion title="Can I use fzf with Vim/Neovim?">
+    Yes! There are excellent plugins:
+
+    **fzf.vim** (Vim and Neovim):
+    ```vim
+    Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+    Plug 'junegunn/fzf.vim'
+    ```
+
+    Provides commands like `:Files`, `:Buffers`, `:Rg`, etc.
+
+    **fzf-lua** (Neovim only, Lua-based):
+    ```lua
+    require('fzf-lua').setup({})
+    ```
+
+    Both are actively maintained. fzf-lua is more modern and performant for Neovim users.
+  </Accordion>
+</AccordionGroup>
+
+## Performance
+
+<AccordionGroup>
+  <Accordion title="How fast is fzf?">
+    fzf is highly optimized:
+
+    - Can process **millions of items** instantly
+    - Uses efficient matching algorithms
+    - Minimal memory footprint
+    - Optimized for interactive use
+
+    Performance should not be a problem in most use cases. If you experience slowness, it's usually the command generating the list, not fzf itself.
+  </Accordion>
+
+  <Accordion title="Which options affect performance?">
+    Some options make fzf slower:
+
+    **Slower:**
+    - `--ansi` - Parsing color codes takes time
+    - `--nth` - Requires tokenizing each line
+    - `--with-nth` - Tokenizing + reassembling lines
+    - Regular expression `--delimiter`
+
+    **Faster:**
+    - Plain string `--delimiter`
+    - No `--ansi` when colors aren't needed
+    - Fewer items to process (filter before piping to fzf)
+
+    ```sh
+    # Slower
+    find / | fzf --ansi --nth 2.. --delimiter /
+
+    # Faster
+    fd --type f | fzf
+    ```
+  </Accordion>
+
+  <Accordion title="Should I use fzf or ripgrep for text search?">
+    Use both together:
+
+    - **Ripgrep**: Fast text search in files
+    - **fzf**: Interactive filtering and selection
+
+    ```sh
+    # Ripgrep finds matches, fzf lets you select interactively
+    rg --color=always pattern | fzf --ansi
+    ```
+
+    For large codebases, let ripgrep do the heavy lifting:
+    ```sh
+    # Interactive ripgrep launcher
+    fzf --disabled --bind 'change:reload(rg {q})'
+    ```
+
+    fzf is not designed for searching text in files — that's what ripgrep does best.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Where can I find more help?">
+    Several resources are available:
+
+    <CardGroup cols={2}>
+      <Card title="Man page" icon="book">
+        ```sh
+        fzf --man
+        # or
+        man fzf
+        ```
+      </Card>
+      <Card title="GitHub Issues" icon="github" href="https://github.com/junegunn/fzf/issues">
+        Search existing issues or create new ones
+      </Card>
+      <Card title="Wiki" icon="book-open" href="https://github.com/junegunn/fzf/wiki">
+        Community tips and examples
+      </Card>
+      <Card title="Troubleshooting Guide" icon="wrench" href="./troubleshooting">
+        Common issues and solutions
+      </Card>
+    </CardGroup>
+  </Accordion>
+
+  <Accordion title="Key bindings not working after installation">
+    You need to set up shell integration. See [How do I set up shell integration?](#how-do-i-set-up-shell-integration) above.
+  </Accordion>
+
+  <Accordion title="FZF_DEFAULT_COMMAND not being used">
+    `FZF_DEFAULT_COMMAND` is **not** used by shell integration key bindings.
+
+    Instead, use:
+    - `FZF_CTRL_T_COMMAND` for CTRL-T
+    - `FZF_ALT_C_COMMAND` for ALT-C
+    - `_fzf_compgen_path()` and `_fzf_compgen_dir()` for completion
+
+    See the [Troubleshooting guide](./troubleshooting) for details.
+  </Accordion>
+</AccordionGroup>
+
+## Contributing and community
+
+<AccordionGroup>
+  <Accordion title="How can I contribute to fzf?">
+    Contributions are welcome:
+
+    - **Report bugs**: [GitHub Issues](https://github.com/junegunn/fzf/issues)
+    - **Submit features**: Open an issue to discuss first
+    - **Improve docs**: Wiki and documentation PRs welcome
+    - **Share examples**: Add to the [wiki examples page](https://github.com/junegunn/fzf/wiki/examples)
+
+    See the repository for more details on contributing.
+  </Accordion>
+
+  <Accordion title="Where can I find more examples?">
+    <CardGroup cols={2}>
+      <Card title="Examples page" icon="code" href="./examples">
+        Real-world recipes and patterns
+      </Card>
+      <Card title="Advanced guide" icon="graduation-cap" href="https://github.com/junegunn/fzf/blob/master/ADVANCED.md">
+        Advanced features and examples
+      </Card>
+      <Card title="Wiki examples" icon="book-open" href="https://github.com/junegunn/fzf/wiki/examples">
+        Community-maintained examples
+      </Card>
+      <Card title="Related projects" icon="link" href="https://github.com/junegunn/fzf/wiki/Related-projects">
+        Tools and scripts using fzf
+      </Card>
+    </CardGroup>
+  </Accordion>
+
+  <Accordion title="Is fzf actively maintained?">
+    Yes! fzf is actively developed and maintained:
+
+    - Regular updates and bug fixes
+    - New features added frequently
+    - Strong community support
+    - Used by thousands of developers worldwide
+
+    Check the [CHANGELOG](https://github.com/junegunn/fzf/blob/master/CHANGELOG.md) to see recent updates.
+  </Accordion>
+</AccordionGroup>

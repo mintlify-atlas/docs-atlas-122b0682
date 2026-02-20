@@ -1,0 +1,442 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for fzf
+---
+
+This guide helps you diagnose and resolve common issues you might encounter when using fzf.
+
+## Installation issues
+
+<AccordionGroup>
+  <Accordion title="Shell integration not working after installation">
+    If key bindings and fuzzy completion aren't working after installing fzf, you need to set up shell integration.
+
+    <Steps>
+      <Step title="Add the appropriate line to your shell configuration">
+        **Bash** - Add to `~/.bashrc`:
+        ```sh
+        eval "$(fzf --bash)"
+        ```
+
+        **Zsh** - Add to `~/.zshrc`:
+        ```sh
+        source <(fzf --zsh)
+        ```
+
+        **Fish** - Add to `~/.config/fish/config.fish`:
+        ```fish
+        fzf --fish | source
+        ```
+      </Step>
+      <Step title="Reload your shell configuration">
+        ```sh
+        source ~/.bashrc  # or ~/.zshrc for zsh
+        ```
+      </Step>
+    </Steps>
+
+    <Note>
+      The `--bash`, `--zsh`, and `--fish` options require fzf 0.48.0 or later. If you have an older version, source the individual script files in the `/shell` directory instead.
+    </Note>
+  </Accordion>
+
+  <Accordion title="Homebrew installation missing shell integration">
+    When you install fzf via Homebrew or other package managers, shell integration is not automatically configured.
+
+    Follow the shell integration setup instructions above. The location of shell integration files may vary depending on your package manager.
+
+    To find the location:
+    ```sh
+    # For Debian/Ubuntu
+    apt show fzf
+
+    # For Homebrew
+    brew info fzf
+    ```
+  </Accordion>
+
+  <Accordion title="Command not found after git installation">
+    If you installed fzf using git clone, you need to run the install script:
+
+    ```sh
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install
+    ```
+
+    The install script will modify your `$PATH` and set up shell integration automatically.
+  </Accordion>
+</AccordionGroup>
+
+## Performance issues
+
+<AccordionGroup>
+  <Accordion title="Slow initial scanning">
+    If fzf takes too long to scan files, you can improve performance with these options:
+
+    **Use faster file traversal tools**
+
+    Set `FZF_DEFAULT_COMMAND` to use fd or ripgrep:
+    ```sh
+    # Using fd
+    export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix'
+
+    # Using ripgrep
+    export FZF_DEFAULT_COMMAND='rg --files'
+    ```
+
+    **Skip unnecessary directories**
+
+    ```sh
+    export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
+    ```
+
+    <Info>
+      fzf itself is very fast and can process millions of items instantly. The bottleneck is usually in the command that generates the list.
+    </Info>
+  </Accordion>
+
+  <Accordion title="Slow filtering with --ansi option">
+    The `--ansi` option tells fzf to extract and parse ANSI color codes in the input, which makes the initial scanning slower.
+
+    **Don't add --ansi to `FZF_DEFAULT_OPTS`** unless you specifically need it:
+    ```sh
+    # Avoid this
+    export FZF_DEFAULT_OPTS='--ansi'  # Will slow down all fzf usage
+
+    # Instead, use it only when needed
+    rg --color=always pattern | fzf --ansi
+    ```
+  </Accordion>
+
+  <Accordion title="Slow filtering with --nth option">
+    Using `--nth` makes fzf slower because it has to tokenize each line. Consider these alternatives:
+
+    - Use plain string delimiters instead of regular expressions with `--delimiter`
+    - Avoid `--with-nth` when possible, as it requires tokenizing and reassembling each line
+    - If you need field filtering, ensure you're using the most efficient delimiter pattern
+  </Accordion>
+</AccordionGroup>
+
+## Display and rendering issues
+
+<AccordionGroup>
+  <Accordion title="Unicode characters not displaying correctly">
+    If you see garbled characters or broken borders:
+
+    <Steps>
+      <Step title="Check your locale settings">
+        ```sh
+        echo $LANG
+        ```
+        Make sure it's set to a UTF-8 locale (e.g., `en_US.UTF-8`).
+      </Step>
+      <Step title="Set locale if needed">
+        ```sh
+        export LANG=en_US.UTF-8
+        export LC_ALL=en_US.UTF-8
+        ```
+      </Step>
+      <Step title="Verify terminal supports UTF-8">
+        Most modern terminals support UTF-8. If issues persist, try a different terminal emulator.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="Colors not working or looking wrong">
+    **Terminal doesn't support 24-bit colors**
+
+    Some color themes require a terminal emulator that can display 24-bit colors. Check your terminal's documentation.
+
+    **ANSI colors not parsed**
+
+    If you're piping colored output to fzf, you need the `--ansi` flag:
+    ```sh
+    rg --color=always pattern | fzf --ansi
+    ```
+
+    **Custom colors not applied**
+
+    Verify your `FZF_DEFAULT_OPTS` is properly exported:
+    ```sh
+    echo $FZF_DEFAULT_OPTS
+    ```
+  </Accordion>
+
+  <Accordion title="fzf opens in fullscreen when I want height mode">
+    Use the `--height` option to open fzf below the cursor:
+
+    ```sh
+    fzf --height 40%
+    ```
+
+    Or set it globally:
+    ```sh
+    export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border'
+    ```
+
+    <Tip>
+      If you're using tmux, try the `--tmux` option for a popup window:
+      ```sh
+      fzf --tmux 70%
+      ```
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## Preview window issues
+
+<AccordionGroup>
+  <Accordion title="Preview window showing error messages">
+    Preview commands are executed in your `$SHELL` with `-c` flag. Common issues:
+
+    **File doesn't exist**
+    ```sh
+    # Check placeholder syntax
+    fzf --preview 'cat {}'  # Correct
+    fzf --preview 'cat {1}' # Use for specific field
+    ```
+
+    **Command not found**
+
+    Make sure the preview command is available in your `$PATH`:
+    ```sh
+    which bat  # Check if command exists
+    ```
+
+    **Shell syntax errors**
+
+    Test your preview command separately:
+    ```sh
+    echo "test.txt" | xargs -I {} sh -c 'bat --color=always {}'
+    ```
+  </Accordion>
+
+  <Accordion title="Preview window not following output (tail -f behavior)">
+    Use the `follow` flag in `--preview-window`:
+
+    ```sh
+    kubectl get pods | fzf \
+      --preview 'kubectl logs --follow --tail=10000 {1}' \
+      --preview-window follow
+    ```
+
+    <Warning>
+      When using `follow`, limit the log output with `--tail` to avoid consuming too much memory.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Image preview not working">
+    fzf supports image preview using one of these protocols:
+
+    - Kitty graphics protocol
+    - iTerm2 inline images protocol
+    - Sixel
+
+    **Check your terminal support**
+
+    Verify your terminal emulator supports one of these protocols. Popular options:
+    - Kitty terminal (Kitty protocol)
+    - iTerm2 on macOS (iTerm2 protocol)
+    - Terminals with Sixel support (e.g., WezTerm, foot)
+
+    **Use the fzf-preview.sh script**
+    ```sh
+    fzf --preview 'fzf-preview.sh {}'
+    ```
+
+    This script is included with fzf and automatically detects the appropriate protocol.
+  </Accordion>
+</AccordionGroup>
+
+## Key binding issues
+
+<AccordionGroup>
+  <Accordion title="CTRL-T, CTRL-R, or ALT-C not working">
+    These key bindings are provided by shell integration. Verify:
+
+    <Steps>
+      <Step title="Shell integration is loaded">
+        Check that you've added the appropriate line to your shell config (see Installation issues above).
+      </Step>
+      <Step title="Bindings aren't disabled">
+        Key bindings can be disabled by setting the corresponding command variable to empty:
+        ```sh
+        # Don't do this unless intentional
+        export FZF_CTRL_T_COMMAND=''
+        export FZF_CTRL_R_COMMAND=''
+        export FZF_ALT_C_COMMAND=''
+        ```
+      </Step>
+      <Step title="Terminal sends the key correctly">
+        Some terminals or terminal multiplexers (like tmux/screen) may intercept certain key combinations. Try alternative bindings or reconfigure your terminal.
+      </Step>
+    </Steps>
+  </Accordion>
+
+  <Accordion title="Custom key bindings not working">
+    **Check binding syntax**
+    ```sh
+    # Correct
+    fzf --bind 'ctrl-y:execute-silent(echo {} | pbcopy)'
+
+    # Common mistakes
+    fzf --bind ctrl-y:execute-silent(echo {} | pbcopy)  # Missing quotes
+    fzf --bind 'ctrl-y=execute-silent(echo {} | pbcopy)' # Using = instead of :
+    ```
+
+    **Action not available**
+
+    Some actions were added in specific versions. Check `fzf --version` and the changelog to verify the action exists in your version.
+
+    **Key already bound**
+
+    Later bindings override earlier ones:
+    ```sh
+    # ctrl-r is bound to the second action
+    fzf --bind 'ctrl-r:reload(ps -ef)' --bind 'ctrl-r:reload(ls)'
+    ```
+  </Accordion>
+
+  <Accordion title="ctrl-h binding not working">
+    This was a known issue in versions before 0.66.1. Update to the latest version:
+
+    ```sh
+    fzf --version
+    ```
+
+    If you're on an older version, upgrade fzf following the instructions for your installation method.
+  </Accordion>
+</AccordionGroup>
+
+## Completion issues
+
+<AccordionGroup>
+  <Accordion title="Fuzzy completion not triggering with **">
+    **Verify shell integration is loaded**
+
+    Fuzzy completion is part of shell integration. Make sure you've set it up correctly.
+
+    **Check trigger sequence**
+
+    The default trigger is `**`. You can customize it:
+    ```sh
+    export FZF_COMPLETION_TRIGGER='~~'
+    ```
+
+    **Bash: Command not in supported list**
+
+    On bash, fuzzy completion is enabled only for predefined commands. Add support for other commands:
+    ```sh
+    _fzf_setup_completion path ag git kubectl
+    _fzf_setup_completion dir tree
+    ```
+  </Accordion>
+
+  <Accordion title="Completion using wrong file source">
+    Customize the completion source:
+
+    ```sh
+    # Use fd for path completion
+    _fzf_compgen_path() {
+      fd --hidden --follow --exclude ".git" . "$1"
+    }
+
+    # Use fd for directory completion
+    _fzf_compgen_dir() {
+      fd --type d --hidden --follow --exclude ".git" . "$1"
+    }
+    ```
+
+    Or set walker options:
+    ```sh
+    export FZF_COMPLETION_PATH_OPTS='--walker file,dir,follow,hidden'
+    export FZF_COMPLETION_DIR_OPTS='--walker dir,follow'
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Environment and integration issues
+
+<AccordionGroup>
+  <Accordion title="FZF_DEFAULT_COMMAND not being used">
+    `FZF_DEFAULT_COMMAND` is **not used by shell integration** key bindings:
+
+    - `CTRL-T` uses `$FZF_CTRL_T_COMMAND`
+    - `ALT-C` uses `$FZF_ALT_C_COMMAND`
+    - Tab completion uses `fzf_compgen_path()` and `fzf_compgen_dir()` functions
+
+    Set these variables instead:
+    ```sh
+    export FZF_CTRL_T_COMMAND='fd --type f'
+    export FZF_ALT_C_COMMAND='fd --type d'
+    ```
+  </Accordion>
+
+  <Accordion title="Options not applied from FZF_DEFAULT_OPTS">
+    **File doesn't exist**
+
+    If using `FZF_DEFAULT_OPTS_FILE`, verify the file path:
+    ```sh
+    export FZF_DEFAULT_OPTS_FILE=~/.fzfrc
+    cat ~/.fzfrc  # Check if file exists and has content
+    ```
+
+    **Syntax errors**
+
+    Test your options:
+    ```sh
+    echo "test" | fzf --height 40%  # Test individual options
+    ```
+
+    **Quotes not properly escaped**
+    ```sh
+    # Correct
+    export FZF_DEFAULT_OPTS='--height 40% --layout reverse'
+
+    # May cause issues with complex options
+    export FZF_DEFAULT_OPTS="--bind 'ctrl-y:execute(echo {})'"  # Watch quotes
+    ```
+  </Accordion>
+
+  <Accordion title="Vim plugin not working">
+    **Plugin not installed**
+
+    Using vim-plug:
+    ```vim
+    Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+    Plug 'junegunn/fzf.vim'
+    ```
+
+    Then run `:PlugInstall` in Vim.
+
+    **Binary not found**
+
+    The plugin needs the fzf binary in your `$PATH`. Verify:
+    ```sh
+    which fzf
+    ```
+
+    <Tip>
+      For Neovim users who prefer Lua-based plugins, check out [fzf-lua](https://github.com/ibhagwan/fzf-lua).
+    </Tip>
+  </Accordion>
+</AccordionGroup>
+
+## Getting more help
+
+<CardGroup cols={2}>
+  <Card title="GitHub Issues" icon="github" href="https://github.com/junegunn/fzf/issues">
+    Search existing issues or create a new one
+  </Card>
+  <Card title="Wiki" icon="book" href="https://github.com/junegunn/fzf/wiki">
+    Community-maintained tips and examples
+  </Card>
+</CardGroup>
+
+<Info>
+  When reporting issues, include:
+  - Your fzf version (`fzf --version`)
+  - Your OS and shell
+  - Minimal reproduction steps
+  - Expected vs actual behavior
+</Info>

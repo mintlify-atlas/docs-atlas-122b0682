@@ -1,0 +1,427 @@
+---
+title: Shell integration
+description: Set up fzf key bindings and fuzzy completion for bash, zsh, and fish shells
+---
+
+fzf provides shell integration for bash, zsh, and fish that enables powerful key bindings and fuzzy completion. Shell integration adds three key bindings to your shell and enables fuzzy tab completion for files, directories, commands, and more.
+
+## Quick setup
+
+You can set up shell integration using the built-in commands that generate the appropriate configuration for your shell.
+
+<Tabs>
+  <Tab title="bash">
+    Add the following line to your `~/.bashrc`:
+
+    ```bash
+    # Set up fzf key bindings and fuzzy completion
+    eval "$(fzf --bash)"
+    ```
+  </Tab>
+  <Tab title="zsh">
+    Add the following line to your `~/.zshrc`:
+
+    ```zsh
+    # Set up fzf key bindings and fuzzy completion
+    source <(fzf --zsh)
+    ```
+  </Tab>
+  <Tab title="fish">
+    Add the following line to your `~/.config/fish/config.fish`:
+
+    ```fish
+    # Set up fzf key bindings
+    fzf --fish | source
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+The `--bash`, `--zsh`, and `--fish` options are only available in fzf 0.48.0 or later. If you have an older version, you need to source individual script files from the `/shell` directory.
+</Note>
+
+## Manual setup (older versions)
+
+If you're using an older version of fzf or want finer control, you can source the individual script files. The location of these files varies depending on your package manager.
+
+<Tabs>
+  <Tab title="bash">
+    ```bash
+    # Key bindings
+    source /path/to/fzf/shell/key-bindings.bash
+    
+    # Fuzzy completion
+    source /path/to/fzf/shell/completion.bash
+    ```
+  </Tab>
+  <Tab title="zsh">
+    ```zsh
+    # Key bindings
+    source /path/to/fzf/shell/key-bindings.zsh
+    
+    # Fuzzy completion
+    source /path/to/fzf/shell/completion.zsh
+    ```
+  </Tab>
+  <Tab title="fish">
+    ```fish
+    # Key bindings
+    source /path/to/fzf/shell/key-bindings.fish
+    
+    # Fuzzy completion
+    source /path/to/fzf/shell/completion.fish
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+To find the location of fzf files installed by your package manager, use `apt show fzf` (Debian/Ubuntu), `brew info fzf` (Homebrew), or check your package manager's documentation.
+</Tip>
+
+## Key bindings
+
+Shell integration provides three powerful key bindings that work in bash, zsh, and fish:
+
+### CTRL-T: Paste files and directories
+
+Pastes the selected files and directories onto the command line.
+
+<Steps>
+  <Step title="Press CTRL-T">
+    The fuzzy finder opens with a list of files and directories under the current directory.
+  </Step>
+  <Step title="Select items">
+    Type to filter the list, use arrow keys to navigate, and press `TAB` to select multiple items.
+  </Step>
+  <Step title="Confirm selection">
+    Press `Enter` to paste the selected paths onto your command line.
+  </Step>
+</Steps>
+
+```bash
+# Example: Open files with vim
+vim <CTRL-T>
+# Type to search, select files, press Enter
+# Result: vim file1.txt file2.txt file3.txt
+```
+
+#### Customization
+
+You can customize the behavior of CTRL-T with environment variables:
+
+```bash
+# Custom command to generate the list
+export FZF_CTRL_T_COMMAND='fd --type f --hidden --exclude .git'
+
+# Additional options for fzf
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+```
+
+<Info>
+By default, CTRL-T uses `--walker file,dir,follow,hidden` to traverse the file system. You can override this by setting `FZF_CTRL_T_COMMAND` to a custom command.
+</Info>
+
+**Disable CTRL-T:**
+
+<CodeGroup>
+```bash bash
+FZF_CTRL_T_COMMAND= eval "$(fzf --bash)"
+```
+
+```zsh zsh
+FZF_CTRL_T_COMMAND= source <(fzf --zsh)
+```
+
+```fish fish
+fzf --fish | FZF_CTRL_T_COMMAND= source
+```
+</CodeGroup>
+
+### CTRL-R: Search command history
+
+Pastes the selected command from your shell history onto the command line.
+
+<Steps>
+  <Step title="Press CTRL-R">
+    The fuzzy finder opens with your command history.
+  </Step>
+  <Step title="Search history">
+    Type to filter commands. Press `CTRL-R` again to toggle sorting by relevance vs. chronological order.
+  </Step>
+  <Step title="Paste command">
+    Press `Enter` to paste the selected command onto your command line.
+  </Step>
+</Steps>
+
+```bash
+# Press CTRL-R and type "git" to search for git commands in history
+<CTRL-R>
+git
+# Select a command and press Enter
+```
+
+#### Advanced features
+
+- **CTRL-R again**: Toggle sorting by relevance
+- **ALT-R**: Toggle "raw" mode to see surrounding items
+- **CTRL-/** or **ALT-/**: Toggle line wrapping
+- **CTRL-N** / **CTRL-P** (raw mode): Navigate between matching items only
+
+#### Customization
+
+```bash
+# CTRL-Y to copy the command into clipboard
+export FZF_CTRL_R_OPTS="
+  --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+  --color header:italic
+  --header 'Press CTRL-Y to copy command into clipboard'"
+```
+
+**Disable CTRL-R:**
+
+<CodeGroup>
+```bash bash
+FZF_CTRL_R_COMMAND= eval "$(fzf --bash)"
+```
+
+```zsh zsh
+FZF_CTRL_R_COMMAND= source <(fzf --zsh)
+```
+
+```fish fish
+fzf --fish | FZF_CTRL_R_COMMAND= source
+```
+</CodeGroup>
+
+### ALT-C: Change directory
+
+Changes to the selected directory.
+
+<Steps>
+  <Step title="Press ALT-C">
+    The fuzzy finder opens with a list of directories.
+  </Step>
+  <Step title="Select directory">
+    Type to filter the list and use arrow keys to navigate.
+  </Step>
+  <Step title="Change directory">
+    Press `Enter` to change to the selected directory.
+  </Step>
+</Steps>
+
+```bash
+# Press ALT-C to quickly navigate to a directory
+<ALT-C>
+# Type "project" to find project directories
+# Select one and press Enter - you're now in that directory
+```
+
+#### Customization
+
+```bash
+# Custom command to generate directory list
+export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
+
+# Show tree structure in preview
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {}'"
+```
+
+<Info>
+By default, ALT-C uses `--walker dir,follow,hidden` to find directories.
+</Info>
+
+**Disable ALT-C:**
+
+<CodeGroup>
+```bash bash
+FZF_ALT_C_COMMAND= eval "$(fzf --bash)"
+```
+
+```zsh zsh
+FZF_ALT_C_COMMAND= source <(fzf --zsh)
+```
+
+```fish fish
+fzf --fish | FZF_ALT_C_COMMAND= source
+```
+</CodeGroup>
+
+## Fuzzy completion
+
+Shell integration enables fuzzy completion with the `**` trigger sequence (customizable).
+
+### Files and directories
+
+Trigger fuzzy completion by typing `**` followed by `TAB`:
+
+```bash
+# Files under current directory
+vim **<TAB>
+
+# Files under parent directory
+vim ../**<TAB>
+
+# Files matching a pattern
+vim ../fzf**<TAB>
+
+# Files under home directory
+vim ~/**<TAB>
+
+# Directories (single selection)
+cd **<TAB>
+
+# Directories under ~/github matching "fzf"
+cd ~/github/fzf**<TAB>
+```
+
+### Process IDs
+
+Fuzzy completion works with the `kill` command:
+
+```bash
+# Select multiple processes with TAB or Shift-TAB
+kill -9 **<TAB>
+```
+
+### Host names
+
+For SSH, fuzzy completion provides hostname matching from `/etc/hosts` and `~/.ssh/config`:
+
+```bash
+ssh **<TAB>
+```
+
+### Environment variables and aliases
+
+<Tabs>
+  <Tab title="bash / zsh">
+    ```bash
+    unset **<TAB>
+    export **<TAB>
+    unalias **<TAB>
+    ```
+  </Tab>
+  <Tab title="fish">
+    ```fish
+    set <SHIFT-TAB>
+    ```
+  </Tab>
+</Tabs>
+
+### Customization (bash and zsh)
+
+```bash
+# Use ~~ as the trigger instead of **
+export FZF_COMPLETION_TRIGGER='~~'
+
+# General options for completion
+export FZF_COMPLETION_OPTS='--border --info=inline'
+
+# Options for path completion
+export FZF_COMPLETION_PATH_OPTS='--walker file,dir,follow,hidden'
+
+# Options for directory completion
+export FZF_COMPLETION_DIR_OPTS='--walker dir,follow'
+```
+
+#### Advanced customization with `_fzf_comprun`
+
+Define the `_fzf_comprun` function to customize fzf options based on the command:
+
+```bash
+_fzf_comprun() {
+  local command=$1
+  shift
+
+  case "$command" in
+    cd)           fzf --preview 'tree -C {} | head -200'   "$@" ;;
+    export|unset) fzf --preview "eval 'echo \$'{}"         "$@" ;;
+    ssh)          fzf --preview 'dig {}'                   "$@" ;;
+    *)            fzf --preview 'bat -n --color=always {}' "$@" ;;
+  esac
+}
+```
+
+#### Custom completion source
+
+Override the default path and directory completion sources:
+
+```bash
+# Use fd for path completion
+_fzf_compgen_path() {
+  fd --hidden --follow --exclude ".git" . "$1"
+}
+
+# Use fd for directory completion
+_fzf_compgen_dir() {
+  fd --type d --hidden --follow --exclude ".git" . "$1"
+}
+```
+
+#### Enable completion for more commands (bash only)
+
+```bash
+# Enable path completion for ag, git, kubectl
+_fzf_setup_completion path ag git kubectl
+
+# Enable directory completion for tree
+_fzf_setup_completion dir tree
+```
+
+### Fuzzy completion for fish
+
+Fuzzy completion in fish differs from bash and zsh:
+
+- Activates on `Shift-TAB` instead of a trigger sequence
+- `TAB` preserves fish's native completion behavior
+- Relies on fish's native completion system for candidates
+- Only `FZF_COMPLETION_OPTS` is supported for customization
+
+<Info>
+For recursive file searching in fish, use the `CTRL-T` key binding instead of fuzzy completion.
+</Info>
+
+## Display modes
+
+You can configure how fzf appears when triggered by key bindings:
+
+```bash
+# Use tmux popup mode when in tmux, otherwise use height mode
+export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
+
+# Per-binding configuration
+export FZF_CTRL_T_OPTS='--height 60%'
+export FZF_CTRL_R_OPTS='--tmux bottom,60% --height 60% --border top'
+export FZF_ALT_C_OPTS='--height 50%'
+```
+
+<Tip>
+The `--tmux` option is silently ignored when you're not running inside tmux, making it safe to use in your shell configuration.
+</Tip>
+
+## Fish shell specific features
+
+The `CTRL-T` binding in fish uses the last token on the command line as the root directory:
+
+```fish
+# Start with:
+ls /var/
+
+# Press CTRL-T at the end of the line
+# fzf will list files under /var/ instead of the current directory
+```
+
+When using a custom `FZF_CTRL_T_COMMAND`, use the unexpanded `$dir` variable:
+
+```fish
+set -g FZF_CTRL_T_COMMAND "command find -L \$dir -type f 2> /dev/null | sed '1d; s#^\\./##'"
+```
+
+## More information
+
+For additional tips and examples, visit the [fzf wiki page on configuring shell key bindings](https://github.com/junegunn/fzf/wiki/Configuring-shell-key-bindings).

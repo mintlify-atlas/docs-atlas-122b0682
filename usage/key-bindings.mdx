@@ -1,0 +1,316 @@
+---
+title: Key bindings for command-line
+description: Use CTRL-T, CTRL-R, and ALT-C to supercharge your command-line workflow
+---
+
+Once you set up shell integration, fzf provides powerful key bindings that integrate directly into your bash, zsh, or fish shell. These bindings let you quickly search for files, command history, and directories without leaving the command line.
+
+## Setting up shell integration
+
+Before using the key bindings, you need to set up shell integration:
+
+<Tabs>
+  <Tab title="bash">
+    Add to your `~/.bashrc`:
+    
+    ```bash
+    # Set up fzf key bindings and fuzzy completion
+    eval "$(fzf --bash)"
+    ```
+  </Tab>
+  <Tab title="zsh">
+    Add to your `~/.zshrc`:
+    
+    ```bash
+    # Set up fzf key bindings and fuzzy completion
+    source <(fzf --zsh)
+    ```
+  </Tab>
+  <Tab title="fish">
+    Add to your `~/.config/fish/config.fish`:
+    
+    ```fish
+    # Set up fzf key bindings
+    fzf --fish | source
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+The `--bash`, `--zsh`, and `--fish` options are available in fzf 0.48.0 or later. For older versions, you'll need to source the individual script files from the `/shell` directory.
+</Note>
+
+## CTRL-T: File and directory finder
+
+Press **CTRL-T** to launch fzf and paste the selected files and directories onto the command line.
+
+### How it works
+
+```bash
+$ vim <CTRL-T>
+# fzf opens with a list of files and directories
+# Select one or more items
+# Press Enter
+$ vim src/components/Header.tsx
+```
+
+### Configuration
+
+The CTRL-T binding uses the `--walker file,dir,follow,hidden` option by default to traverse the file system.
+
+<Accordion title="Customizing CTRL-T command">
+  You can override the default command:
+  
+  ```bash
+  # Use fd instead of the built-in walker
+  export FZF_CTRL_T_COMMAND='fd --type f --strip-cwd-prefix'
+  ```
+  
+  Or customize walker options:
+  
+  ```bash
+  export FZF_CTRL_T_OPTS="--walker-skip .git,node_modules,target"
+  ```
+</Accordion>
+
+<Accordion title="Adding preview with bat">
+  ```bash
+  # Preview file content using bat
+  export FZF_CTRL_T_OPTS="
+    --walker-skip .git,node_modules,target
+    --preview 'bat -n --color=always {}'
+    --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+  ```
+  
+  Press CTRL-/ to toggle the preview window.
+</Accordion>
+
+<Accordion title="Disabling CTRL-T">
+  Set `FZF_CTRL_T_COMMAND` to an empty string when sourcing the script:
+  
+  ```bash
+  # bash
+  FZF_CTRL_T_COMMAND= eval "$(fzf --bash)"
+  
+  # zsh
+  FZF_CTRL_T_COMMAND= source <(fzf --zsh)
+  ```
+</Accordion>
+
+### Multi-selection
+
+You can select multiple files with TAB and Shift-TAB:
+
+```bash
+$ rm <CTRL-T>
+# Select multiple files with TAB
+# Press Enter
+$ rm file1.txt file2.txt file3.txt
+```
+
+## CTRL-R: Command history search
+
+Press **CTRL-R** to search through your command history and paste the selected command onto the command line.
+
+### How it works
+
+```bash
+$ <CTRL-R>
+# fzf opens with your command history
+# Type to search
+# Press Enter to paste the command
+```
+
+### Interactive features
+
+<Steps>
+
+### Toggle sort order
+
+Press **CTRL-R** again while in fzf to toggle between relevance-based sorting and chronological order.
+
+### Toggle raw mode
+
+Press **ALT-R** to toggle "raw" mode, which shows surrounding items of a match. In this mode, use CTRL-N and CTRL-P to move between matching items only.
+
+### Toggle line wrapping
+
+Press **CTRL-/** or **ALT-/** to toggle line wrapping for long commands.
+
+</Steps>
+
+### Configuration
+
+<Accordion title="Customizing CTRL-R options">
+  ```bash
+  # Add custom key binding to copy command to clipboard
+  export FZF_CTRL_R_OPTS="
+    --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+    --color header:italic
+    --header 'Press CTRL-Y to copy command into clipboard'"
+  ```
+</Accordion>
+
+<Accordion title="Disabling CTRL-R">
+  Set `FZF_CTRL_R_COMMAND` to an empty string when sourcing the script:
+  
+  ```bash
+  # bash
+  FZF_CTRL_R_COMMAND= eval "$(fzf --bash)"
+  
+  # zsh
+  FZF_CTRL_R_COMMAND= source <(fzf --zsh)
+  ```
+</Accordion>
+
+<Warning>
+Custom override via a non-empty `FZF_CTRL_R_COMMAND` is not yet supported and will emit a warning.
+</Warning>
+
+## ALT-C: Directory navigation
+
+Press **ALT-C** (or **ESC-C**) to cd into the selected directory.
+
+### How it works
+
+```bash
+$ pwd
+/home/user
+$ <ALT-C>
+# fzf opens with a list of directories
+# Select a directory
+# Press Enter
+$ pwd
+/home/user/projects/myapp
+```
+
+### Configuration
+
+The ALT-C binding uses the `--walker dir,follow,hidden` option by default.
+
+<Accordion title="Customizing ALT-C command">
+  ```bash
+  # Use fd to generate directory list
+  export FZF_ALT_C_COMMAND='fd --type d --strip-cwd-prefix'
+  ```
+  
+  Or customize walker options:
+  
+  ```bash
+  export FZF_ALT_C_OPTS="--walker-skip .git,node_modules,target"
+  ```
+</Accordion>
+
+<Accordion title="Adding tree preview">
+  ```bash
+  # Show tree structure in preview window
+  export FZF_ALT_C_OPTS="
+    --walker-skip .git,node_modules,target
+    --preview 'tree -C {}'"
+  ```
+</Accordion>
+
+<Accordion title="Disabling ALT-C">
+  Set `FZF_ALT_C_COMMAND` to an empty string when sourcing the script:
+  
+  ```bash
+  # bash
+  FZF_ALT_C_COMMAND= eval "$(fzf --bash)"
+  
+  # zsh
+  FZF_ALT_C_COMMAND= source <(fzf --zsh)
+  ```
+</Accordion>
+
+## Configuring display modes
+
+You can configure different display modes for each key binding:
+
+```bash
+# Use tmux popups or height mode
+export FZF_CTRL_T_OPTS='--tmux 80% --height 80%'
+export FZF_CTRL_R_OPTS='--tmux bottom,60% --height 60% --border top'
+export FZF_ALT_C_OPTS='--tmux 90% --height 90%'
+```
+
+These options override `$FZF_DEFAULT_OPTS` for specific bindings.
+
+## Summary of key bindings
+
+| Key binding | Action | List source | Configuration |
+|-------------|--------|-------------|---------------|
+| **CTRL-T** | Paste selected files/directories | File system walker | `FZF_CTRL_T_COMMAND`, `FZF_CTRL_T_OPTS` |
+| **CTRL-R** | Paste selected command | Shell history | `FZF_CTRL_R_OPTS` |
+| **ALT-C** | Change to selected directory | Directory walker | `FZF_ALT_C_COMMAND`, `FZF_ALT_C_OPTS` |
+
+## Practical examples
+
+<Accordion title="Quick file editing">
+  ```bash
+  $ vim <CTRL-T>
+  # Type part of filename
+  # Press Enter
+  ```
+  
+  Faster than typing full file paths, especially with fuzzy matching.
+</Accordion>
+
+<Accordion title="Re-running previous commands">
+  ```bash
+  $ <CTRL-R>
+  # Type "docker run"
+  # Select the exact docker command you used before
+  # Press Enter to paste it
+  # Modify if needed
+  # Press Enter to execute
+  ```
+</Accordion>
+
+<Accordion title="Navigating project structure">
+  ```bash
+  $ <ALT-C>
+  # Type "test"
+  # Select the test directory
+  $ pwd
+  /home/user/project/tests
+  ```
+</Accordion>
+
+<Accordion title="Complex file operations">
+  ```bash
+  # Copy multiple files to a directory
+  $ cp <CTRL-T>  # Select source files with TAB
+  # Press Enter
+  $ cp file1.txt file2.txt <ALT-C>  # Select destination
+  # Press Enter
+  $ cp file1.txt file2.txt /path/to/destination/
+  ```
+</Accordion>
+
+## Tips and tricks
+
+<Tip>
+**Use walker-skip to improve performance**: Exclude large directories like `node_modules`, `.git`, and `target` to make searches faster:
+
+```bash
+export FZF_CTRL_T_OPTS="--walker-skip .git,node_modules,target,dist,.next"
+```
+</Tip>
+
+<Tip>
+**Combine with other tools**: Use the key bindings with tools like `bat`, `tree`, and `rg` for enhanced previews:
+
+```bash
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --line-range :500 {}'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always {} | head -200'"
+```
+</Tip>
+
+<Tip>
+**Disable bindings selectively**: If you only want some bindings, disable the others:
+
+```bash
+# Only enable CTRL-T and CTRL-R, disable ALT-C
+FZF_ALT_C_COMMAND= eval "$(fzf --bash)"
+```
+</Tip>

@@ -1,0 +1,369 @@
+---
+title: Performance optimization
+description: Optimize fzf for speed and efficiency with the right options and configurations
+---
+
+fzf is fast and can handle millions of items instantly. However, certain options affect performance. This guide helps you optimize fzf for your use case.
+
+## Performance is usually not a problem
+
+fzf's core matching algorithm is highly optimized. For most use cases, you won't need to worry about performance. However, understanding which options affect speed helps you make informed decisions.
+
+<Info>
+fzf can comfortably handle hundreds of thousands of items with sub-second response times on modern hardware.
+</Info>
+
+## Options that affect performance
+
+### ANSI color parsing
+
+The `--ansi` option tells fzf to parse ANSI color codes in the input. This makes the initial scanning slower.
+
+```bash
+# Slower: parses color codes
+rg --color=always pattern | fzf --ansi
+
+# Faster: no color parsing
+rg --color=never pattern | fzf
+```
+
+<Warning>
+Don't add `--ansi` to `$FZF_DEFAULT_OPTS`. Only use it when you actually need to preserve colors from the input.
+</Warning>
+
+**When to use `--ansi`:**
+- When piping from tools that output colors (ripgrep, git, etc.)
+- When you want to preserve syntax highlighting in the list
+
+**When to avoid `--ansi`:**
+- Plain text input without color codes
+- When speed is critical and colors aren't necessary
+- Default options that apply to all fzf invocations
+
+### Field tokenization with --nth
+
+The `--nth` option makes fzf tokenize each line into fields before matching:
+
+```bash
+# Slower: tokenizes every line
+ps aux | fzf --nth 11..
+
+# Faster: matches against whole line
+ps aux | fzf
+```
+
+**Impact:**
+- Adds overhead for splitting each line into tokens
+- Overhead is multiplied by the number of items
+
+**When it's worth it:**
+- When you want to search only specific fields
+- When ignoring certain columns improves relevance
+
+### Delimiter type
+
+Use plain string delimiters instead of regex when possible:
+
+```bash
+# Faster: plain string delimiter
+fzf --delimiter ':'
+
+# Slower: regex delimiter  
+fzf --delimiter '\s+'
+```
+
+**Recommendation:**
+- Use single characters or simple strings as delimiters
+- Only use regex delimiters when necessary
+
+### Field transformation with --with-nth
+
+The `--with-nth` option makes fzf tokenize AND reassemble each line:
+
+```bash
+# Slowest: tokenize + reassemble for display
+ps aux | fzf --with-nth 11..
+
+# Faster: tokenize only for matching
+ps aux | fzf --nth 11..
+
+# Fastest: no tokenization
+ps aux | fzf
+```
+
+**Impact:**
+- Tokenizes every line (like `--nth`)
+- Reassembles selected fields for display
+- Most expensive option in terms of processing
+
+**When it's worth it:**
+- When you need to hide certain fields from display
+- When reordering fields improves usability
+
+## Optimization strategies
+
+### 1. Limit input size
+
+The most effective optimization is reducing the number of items:
+
+```bash
+# Instead of searching everything
+find / -type f | fzf
+
+# Limit scope to relevant directories
+find ~/projects -type f | fzf
+
+# Or use head to cap results
+find / -type f | head -100000 | fzf
+```
+
+### 2. Use appropriate schemes
+
+fzf provides schemes optimized for different input types:
+
+```bash
+# For file paths
+find . | fzf --scheme=path
+
+# For command history
+history | fzf --scheme=history
+
+# Default scheme for mixed content
+ps aux | fzf --scheme=default
+```
+
+<Tabs>
+  <Tab title="default">
+    - General-purpose scheme
+    - Works well with any input type
+    - Balanced between speed and quality
+  </Tab>
+  
+  <Tab title="path">
+    - Optimized for file paths
+    - Better scoring for directory separators
+    - Handles paths more intuitively
+  </Tab>
+  
+  <Tab title="history">
+    - Optimized for chronological data
+    - Preserves order better
+    - Good for command history, logs
+  </Tab>
+</Tabs>
+
+### 3. Optimize preview commands
+
+Preview commands run for every selected item:
+
+```bash
+# Slow: processes entire file
+fzf --preview 'cat {}'
+
+# Faster: limits output
+fzf --preview 'head -100 {}'
+
+# Faster: uses bat with line limit
+fzf --preview 'bat --line-range :500 {}'
+```
+
+<Tip>
+Limit preview command output with `head`, `tail`, or tool-specific options. Users rarely need to see entire files in the preview.
+</Tip>
+
+### 4. Debounce reload actions
+
+When using reload on change events, add debouncing:
+
+```bash
+# Without debouncing: runs on every keystroke
+fzf --bind 'change:reload(expensive-command {q})'
+
+# With debouncing: slight delay reduces load
+fzf --bind 'change:reload:sleep 0.1; expensive-command {q}'
+```
+
+**Benefits:**
+- Reduces number of intermediate reloads while typing
+- Decreases system load
+- Improves responsiveness
+
+### 5. Choose the right tool for the job
+
+Use specialized tools for their strengths:
+
+<CodeGroup>
+```bash Fast file finding
+# Use fd instead of find
+fd --type f | fzf
+
+# Or use fzf's built-in walker
+fzf --walker file,dir,follow
+```
+
+```bash Fast text search
+# Use ripgrep for searching file contents
+rg --files-with-matches pattern | fzf
+
+# Not fzf with grep preview
+find . | fzf --preview 'grep pattern {}'
+```
+</CodeGroup>
+
+## Memory considerations
+
+### Long-running previews
+
+Preview commands that run continuously can consume memory:
+
+```bash
+# Can consume a lot of memory
+kubectl get pods | fzf \
+  --preview 'kubectl logs --follow --tail=10000 {1}'
+
+# Better: limit tail size
+kubectl get pods | fzf \
+  --preview 'kubectl logs --follow --tail=100 {1}'
+```
+
+### Large result sets
+
+fzf loads the entire input into memory:
+
+```bash
+# Loads millions of results into memory
+find / -type f | fzf
+
+# Better: scope appropriately
+find ~/projects -type f | fzf
+
+# Or stream from a fast source
+fd --type f | fzf
+```
+
+<Note>
+fzf is memory-efficient, but every item in the list consumes some RAM. With millions of items, this adds up.
+</Note>
+
+## Real-world optimizations
+
+### Optimized file search
+
+```bash
+# Good balance of speed and functionality
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix'
+export FZF_DEFAULT_OPTS="--scheme=path --preview='bat --style=numbers --color=always --line-range :500 {}'"
+```
+
+### Optimized command history
+
+```bash
+# Fast history search with preview
+export FZF_CTRL_R_OPTS="
+  --scheme=history
+  --preview 'echo {}'
+  --preview-window up:3:wrap
+"
+```
+
+### Optimized ripgrep integration
+
+```bash
+# Fast text search with debouncing
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case"
+fzf --ansi --disabled \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --preview 'bat --color=always {1} --line-range {2}: --highlight-line {2}' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3'
+```
+
+## Benchmarking
+
+Test performance with different configurations:
+
+```bash
+# Generate test data
+seq 1000000 > /tmp/numbers.txt
+
+# Benchmark with time
+time cat /tmp/numbers.txt | fzf --filter 999
+
+# Compare with options
+time cat /tmp/numbers.txt | fzf --ansi --filter 999
+time cat /tmp/numbers.txt | fzf --nth 1 --filter 999
+```
+
+<Tip>
+Use `--filter` for non-interactive benchmarking. It runs the search and exits immediately.
+</Tip>
+
+## Performance checklist
+
+When optimizing fzf:
+
+<Steps>
+  <Step title="Profile your use case">
+    Identify what feels slow. Is it the initial load, the matching, or the preview?
+  </Step>
+  
+  <Step title="Reduce input size">
+    Can you filter or limit the input before it reaches fzf?
+  </Step>
+  
+  <Step title="Remove unnecessary options">
+    Are you using `--ansi`, `--nth`, or `--with-nth` when you don't need them?
+  </Step>
+  
+  <Step title="Optimize preview commands">
+    Are your preview commands doing more work than necessary?
+  </Step>
+  
+  <Step title="Add debouncing">
+    If using reload on change, have you added a small delay?
+  </Step>
+  
+  <Step title="Use appropriate schemes">
+    Have you selected the right `--scheme` for your input type?
+  </Step>
+</Steps>
+
+## Common performance mistakes
+
+### Adding --ansi to default options
+
+```bash
+# DON'T DO THIS
+export FZF_DEFAULT_OPTS='--ansi --preview "bat {}"'
+
+# This slows down all fzf usage, even when you don't need colors
+ps aux | fzf  # unnecessarily slow
+history | fzf  # unnecessarily slow
+```
+
+### Expensive preview commands
+
+```bash
+# DON'T DO THIS  
+fzf --preview 'find {} -type f | wc -l'
+
+# Running find for every selection is very expensive
+# Use a simpler preview or cache results
+```
+
+### Not limiting find output
+
+```bash
+# DON'T DO THIS
+find / -type f | fzf
+
+# Searching the entire filesystem takes forever and uses lots of memory
+# Limit scope to relevant directories
+find ~/projects -type f | fzf
+```
+
+## Next steps
+
+- Review [Ripgrep integration](/advanced/ripgrep-integration) for optimized text search
+- See [Preview window](/advanced/preview-window) for preview optimization tips
+- Explore [Dynamic reloading](/advanced/dynamic-reload) for efficient reload patterns
+- Check the [Command options reference](/reference/command-options) for all available options

@@ -1,0 +1,287 @@
+---
+title: Preview window
+description: Display file contents, command output, and context in fzf's split preview window
+---
+
+The preview window lets fzf show additional context for the currently selected item. You can display file contents, command output, or any other information in a split window that updates as you navigate.
+
+## Basic usage
+
+Use the `--preview` option to specify a command that generates the preview content. Your `$SHELL` executes the command with the current line as an argument.
+
+```bash
+# Show file contents using cat
+fzf --preview 'cat {}'
+```
+
+The `{}` placeholder is replaced with the currently selected line.
+
+<Tip>
+For better syntax highlighting, use [bat](https://github.com/sharkdp/bat) instead of cat:
+
+```bash
+fzf --preview 'bat --color=always {}'
+```
+</Tip>
+
+## Configuring the preview window
+
+### Position and size
+
+Control where the preview window appears and how much space it takes:
+
+```bash
+# Position: up, down, left, right
+fzf --preview 'cat {}' --preview-window up
+
+# Position with size
+fzf --preview 'cat {}' --preview-window up,40%
+
+# Multiple options separated by commas
+fzf --preview 'cat {}' --preview-window up,60%,border-bottom
+```
+
+<Tabs>
+  <Tab title="Position">
+    - `up` - Above the main window
+    - `down` - Below the main window
+    - `left` - To the left of the main window
+    - `right` - To the right of the main window
+  </Tab>
+  
+  <Tab title="Size">
+    - `40%` - Take 40% of the screen
+    - `80` - Take exactly 80 lines/columns
+    - `~40%` - Take up to 40% (shrinks if content is smaller)
+  </Tab>
+  
+  <Tab title="Border">
+    - `border` - Border on all sides
+    - `border-bottom` - Border only on bottom
+    - `border-top` - Border only on top
+    - `border-left` - Border only on left
+    - `border-right` - Border only on right
+    - `border-horizontal` - Top and bottom borders
+    - `border-vertical` - Left and right borders
+  </Tab>
+</Tabs>
+
+### Scroll offset
+
+Control how the preview window scrolls to show the relevant content:
+
+```bash
+# Preview with line numbers, highlighting line {2}
+rg --line-number . | fzf --delimiter : \
+    --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window '+{2}/2'
+```
+
+The scroll offset syntax:
+- `+{2}` - Scroll to line number from field 2
+- `/2` - Position at 1/2 (center) of the window
+- `+{2}+3/3` - Scroll to line {2} + 3 lines, position at 1/3 from top
+
+### Fixed header
+
+Make the top lines of the preview always visible:
+
+```bash
+fzf --preview 'bat --color=always {}' --preview-window '~3'
+```
+
+The `~3` option makes the first 3 lines a fixed header that stays visible when scrolling.
+
+## Complete example with ripgrep
+
+Here's a sophisticated example showing file search with proper preview:
+
+```bash
+rg --color=always --line-number --no-heading --smart-case "${*:-}" |
+  fzf --ansi \
+      --delimiter : \
+      --preview 'bat --color=always {1} --highlight-line {2}' \
+      --preview-window 'up,60%,border-bottom,+{2}+3/3,~3'
+```
+
+### Breaking down the preview window options
+
+<Steps>
+  <Step title="Position and size: up,60%">
+    Preview window appears above the main window, taking 60% of screen height.
+  </Step>
+  
+  <Step title="Border: border-bottom">
+    Shows a border only on the bottom edge, separating it from the main window.
+  </Step>
+  
+  <Step title="Scroll offset: +{2}+3/3">
+    - `+{2}` - Start at line number from field 2 (the ripgrep line number)
+    - `+3` - Add 3 lines to compensate for bat's header
+    - `/3` - Position this line at 1/3 from the top of the window
+  </Step>
+  
+  <Step title="Fixed header: ~3">
+    Makes the first 3 lines (bat's file header) always visible.
+  </Step>
+</Steps>
+
+## Advanced preview features
+
+### Dynamic preview command
+
+You can change the preview command dynamically based on the selected item:
+
+```bash
+# Different preview for files vs directories
+fd | fzf --preview '[[ -d {} ]] && tree -C {} || bat --color=always {}'
+```
+
+### Preview window toggle
+
+Let users show/hide or resize the preview window:
+
+```bash
+fzf --preview 'bat --color=always {}' \
+    --bind 'ctrl-/:change-preview-window(down|hidden|)'
+```
+
+Pressing `CTRL-/` cycles through:
+1. `down` - Preview at the bottom
+2. `hidden` - Preview hidden
+3. Default position (from `--preview-window`)
+
+### Multiple preview layouts
+
+```bash
+fzf --preview 'bat --color=always {}' \
+    --preview-window 'up,60%,border-bottom' \
+    --bind 'ctrl-/:change-preview-window(80%,border-bottom|hidden|)'
+```
+
+Cycle between:
+1. 80% height with bottom border
+2. Hidden
+3. Default (60% from original `--preview-window`)
+
+## Log tailing with follow
+
+The `follow` flag makes the preview window automatically scroll to the bottom, like `tail -f`:
+
+```bash
+fzf --preview-window follow --preview 'for i in $(seq 100000); do
+  echo "$i"
+  sleep 0.01
+  (( i % 300 == 0 )) && printf "\033[2J"
+done'
+```
+
+### Kubernetes logs example
+
+```bash
+pods() {
+  command='kubectl get pods --all-namespaces' fzf \
+    --info=inline --layout=reverse --header-lines=1 \
+    --prompt "$(kubectl config current-context | sed 's/-context$//')> " \
+    --header $'╱ Enter (kubectl exec) ╱ CTRL-O (open log in editor) ╱ CTRL-R (reload) ╱\n\n' \
+    --bind 'start,ctrl-r:reload:$command' \
+    --bind 'ctrl-/:change-preview-window(80%,border-bottom|hidden|)' \
+    --bind 'enter:execute:kubectl exec -it --namespace {1} {2} -- bash' \
+    --bind 'ctrl-o:execute:${EDITOR:-vim} <(kubectl logs --all-containers --namespace {1} {2})' \
+    --preview-window up:follow \
+    --preview 'kubectl logs --follow --all-containers --tail=10000 --namespace {1} {2}' "$@"
+}
+```
+
+### How it works
+
+- `--preview-window up:follow` - Preview at top, auto-scrolling
+- `--tail=10000` - Limit initial log size to manage memory
+- `follow` flag keeps the preview scrolled to the bottom as new logs appear
+- `\033[2J` - ANSI escape sequence to clear screen (starts fresh preview)
+
+<Warning>
+Long-running preview commands with `follow` consume memory. Use `--tail` to limit initial output size.
+</Warning>
+
+## Preview window placeholders
+
+Beyond `{}`, you can use field-based placeholders when using `--delimiter`:
+
+```bash
+# ripgrep output format: file:line:column:text
+rg --column --line-number . | fzf --delimiter : \
+    --preview 'bat --color=always {1} --highlight-line {2}'
+```
+
+<Tabs>
+  <Tab title="Basic placeholders">
+    - `{}` - The entire current line
+    - `{1}`, `{2}`, `{3}`, etc. - Individual fields
+    - `{+}` - All selected items (multi-select)
+    - `{q}` - Current query string
+  </Tab>
+  
+  <Tab title="Ranges">
+    - `{1..3}` - Fields 1 through 3
+    - `{2..}` - Fields 2 to the end
+    - `{..3}` - Fields up to 3
+  </Tab>
+  
+  <Tab title="Special">
+    - `{n}` - The line number (0-based)
+    - `{+n}` - Line numbers of all selected items
+  </Tab>
+</Tabs>
+
+## Customizing preview colors
+
+Use the `--color` option to customize preview window colors:
+
+```bash
+fzf --preview 'bat --color=always {}' \
+    --color 'preview-bg:#223344,preview-fg:#bbccdd,preview-border:#778899'
+```
+
+Preview-specific color options:
+- `preview-bg` - Background color
+- `preview-fg` - Foreground/text color  
+- `preview-border` - Border color
+- `preview-label` - Label color (when using `--preview-label`)
+- `preview-scrollbar` - Scrollbar color
+
+## Preview with images
+
+fzf can display images using supported protocols:
+
+- [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/)
+- [iTerm2 inline images protocol](https://iterm2.com/documentation-images.html)
+- [Sixel](https://en.wikipedia.org/wiki/Sixel)
+
+```bash
+fzf --preview 'fzf-preview.sh {}'
+```
+
+See the [fzf-preview.sh](https://github.com/junegunn/fzf/blob/master/bin/fzf-preview.sh) script in the fzf repository for implementation details.
+
+<Info>
+Image preview support depends on your terminal emulator. Not all terminals support all protocols.
+</Info>
+
+## Best practices
+
+1. **Don't add `--preview` to `$FZF_DEFAULT_OPTS`** - Preview commands are context-specific. A file preview won't work with process lists or other data.
+
+2. **Use syntax highlighters** - Tools like bat make previews much more readable than plain cat.
+
+3. **Limit preview command output** - Use `head`, `--tail`, or similar to prevent memory issues with large files.
+
+4. **Provide toggle bindings** - Let users hide the preview with `change-preview-window` for better flexibility.
+
+5. **Consider scroll offsets** - Position relevant lines near the center of the preview window for better context.
+
+## Next steps
+
+- Learn about [Dynamic reloading](/advanced/dynamic-reload) to update the main list dynamically
+- Explore [Executing programs](/advanced/executing-programs) to act on selections
+- See [Ripgrep integration](/advanced/ripgrep-integration) for text search with previews

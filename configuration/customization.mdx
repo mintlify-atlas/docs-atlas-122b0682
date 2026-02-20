@@ -1,0 +1,368 @@
+---
+title: Customization options
+description: Customize fzf's appearance and behavior with display modes, layouts, borders, and style presets
+---
+
+fzf provides extensive customization options to tailor its appearance and behavior to your preferences. You can control display modes, layouts, borders, padding, and more.
+
+## Style presets
+
+For quick setup, fzf offers three style presets that configure multiple options at once:
+
+```bash
+# Default preset
+fzf --style default
+
+# Full preset with all UI elements
+fzf --style full
+
+# Minimal preset for clean interface
+fzf --style minimal
+```
+
+<Tabs>
+  <Tab title="default">
+    The standard fzf appearance with essential UI elements.
+
+    ```bash
+    fzf --style default --preview 'bat --color=always {}'
+    ```
+  </Tab>
+  <Tab title="full">
+    Includes all UI elements: borders, labels, padding, and enhanced visual separation.
+
+    ```bash
+    fzf --style full --preview 'bat --color=always {}'
+    ```
+  </Tab>
+  <Tab title="minimal">
+    Stripped-down interface with minimal visual elements.
+
+    ```bash
+    fzf --style minimal --preview 'bat --color=always {}'
+    ```
+  </Tab>
+</Tabs>
+
+You can also specify a border style with the full preset:
+
+```bash
+fzf --style full:rounded
+fzf --style full:sharp
+fzf --style full:bold
+```
+
+## Display modes
+
+fzf can run in different display modes depending on your needs.
+
+### Fullscreen mode
+
+The default mode uses the entire terminal window:
+
+```bash
+fzf
+```
+
+### Height mode
+
+Display fzf below the cursor with a specific height:
+
+```bash
+# Fixed 40% height
+fzf --height 40%
+
+# Absolute height (20 lines)
+fzf --height 20
+
+# Negative height (screen height - 3)
+fzf --height -3
+```
+
+<ParamField path="--height" type="string">
+  Use tilde prefix (`~`) for adaptive height that adjusts based on the number of items:
+
+  ```bash
+  # Takes only as many lines as needed, up to 100%
+  seq 3 | fzf --height ~100%
+  seq 3000 | fzf --height ~100%
+  ```
+
+  <Note>
+    Adaptive height has limitations:
+    - Cannot be used with top/bottom margin and padding in percent size
+    - Negative values are not allowed
+    - May not work correctly with multi-line items
+  </Note>
+</ParamField>
+
+<ParamField path="--min-height" type="number" default="10+">
+  Minimum height when using `--height` with percentage. The `+` suffix automatically adjusts the value based on other layout options.
+
+  ```bash
+  fzf --height 40% --min-height 15
+  fzf --height 40% --min-height 10+  # Default
+  ```
+</ParamField>
+
+### Tmux mode
+
+Open fzf in a tmux popup window (requires tmux 3.3 or later):
+
+```bash
+# Center popup, 50% width and height (default)
+fzf --tmux
+
+# Center popup, 70% width and height
+fzf --tmux 70%
+
+# Right side, 40% width
+fzf --tmux right,40%
+
+# Bottom, 100% width, 30% height
+fzf --tmux bottom,30%
+
+# Top, 80% width, 40% height
+fzf --tmux top,80%,40%
+```
+
+<Tip>
+  Combine `--height` and `--tmux` for a fallback strategy:
+
+  ```bash
+  # Use tmux popup when in tmux, otherwise use height mode
+  fzf --height 40% --tmux 70%
+  ```
+
+  The `--tmux` option is silently ignored when not running inside tmux.
+</Tip>
+
+## Layout options
+
+<ParamField path="--layout" type="string" default="default">
+  Control the layout direction of the finder.
+
+  - `default` - Display from the bottom of the screen
+  - `reverse` - Display from the top of the screen
+  - `reverse-list` - Display from the top with prompt at the bottom
+
+  ```bash
+  fzf --layout reverse
+  fzf --layout reverse-list
+  ```
+</ParamField>
+
+<ParamField path="--reverse" type="boolean">
+  Shorthand for `--layout=reverse`.
+
+  ```bash
+  fzf --reverse
+  ```
+</ParamField>
+
+## Spacing and borders
+
+### Margin
+
+<ParamField path="--margin" type="string">
+  Add space around the entire finder window. Accepts 1-4 comma-separated values.
+
+  ```bash
+  # Same margin on all sides
+  fzf --margin 10%
+
+  # Vertical, horizontal
+  fzf --margin 1,5%
+
+  # Top, horizontal, bottom
+  fzf --margin 2,10%,3
+
+  # Top, right, bottom, left
+  fzf --margin 1,2,3,4
+  ```
+
+  Values can be absolute numbers (lines/columns) or percentages.
+</ParamField>
+
+### Padding
+
+<ParamField path="--padding" type="string">
+  Add space inside the border (only visible when `--border` is used). Uses the same format as `--margin`.
+
+  ```bash
+  fzf --margin 5% --padding 5% --border --preview 'cat {}' \
+      --color bg:#222222,preview-bg:#333333
+  ```
+</ParamField>
+
+### Borders
+
+<ParamField path="--border" type="string">
+  Draw a border around the finder window.
+
+  Available styles:
+  - `rounded` (default)
+  - `sharp`
+  - `bold`
+  - `double`
+  - `horizontal`
+  - `vertical`
+  - `top`
+  - `bottom`
+  - `left`
+  - `right`
+  - `none`
+
+  ```bash
+  fzf --border
+  fzf --border rounded
+  fzf --border sharp
+  fzf --border horizontal
+  fzf --border top
+  ```
+</ParamField>
+
+### Border labels
+
+Add text labels to borders:
+
+```bash
+# Main border label
+fzf --border --border-label ' My Files '
+
+# Preview border label
+fzf --border --preview 'cat {}' --preview-label ' Preview '
+```
+
+With the `full` style preset, you can add labels to individual sections:
+
+```bash
+fzf --style full \
+    --border-label ' Demo ' \
+    --input-label ' Input ' \
+    --header-label ' File Type ' \
+    --preview-label ' Preview '
+```
+
+## Information display
+
+<ParamField path="--info" type="string" default="default">
+  Control how match information is displayed.
+
+  - `default` - Display on a separate line
+  - `inline` - Display on the same line as the query
+  - `inline-right` - Display on the right side inline
+  - `hidden` - Hide the info line
+
+  ```bash
+  fzf --info inline
+  fzf --info inline-right
+  fzf --info hidden
+  ```
+</ParamField>
+
+<ParamField path="--no-info" type="boolean">
+  Hide the info line (equivalent to `--info hidden`).
+
+  ```bash
+  fzf --no-info
+  ```
+</ParamField>
+
+## Prompt customization
+
+<ParamField path="--prompt" type="string" default="> ">
+  Customize the input prompt.
+
+  ```bash
+  fzf --prompt 'Search> '
+  fzf --prompt '🔍 '
+  ```
+</ParamField>
+
+<ParamField path="--pointer" type="string" default=">">
+  Change the pointer character that indicates the current selection.
+
+  ```bash
+  fzf --pointer '→'
+  fzf --pointer '▶'
+  ```
+</ParamField>
+
+<ParamField path="--marker" type="string" default=">">
+  Change the marker character for multi-selected items.
+
+  ```bash
+  fzf --multi --marker '✓'
+  fzf --multi --marker '●'
+  ```
+</ParamField>
+
+## Advanced layout example
+
+Here's a sophisticated example combining multiple customization options:
+
+```bash
+git ls-files | fzf --style full \
+    --border --padding 1,2 \
+    --border-label ' Demo ' \
+    --input-label ' Input ' \
+    --header-label ' File Type ' \
+    --preview 'bat --color=always {}' \
+    --bind 'result:transform-list-label:
+        if [[ -z $FZF_QUERY ]]; then
+          echo " $FZF_MATCH_COUNT items "
+        else
+          echo " $FZF_MATCH_COUNT matches for [$FZF_QUERY] "
+        fi
+        ' \
+    --bind 'focus:transform-preview-label:[[ -n {} ]] && printf " Previewing [%s] " {}' \
+    --bind 'focus:+transform-header:file --brief {} || echo "No file selected"' \
+    --color 'border:#aaaaaa,label:#cccccc' \
+    --color 'preview-border:#9999cc,preview-label:#ccccff' \
+    --color 'list-border:#669966,list-label:#99cc99' \
+    --color 'input-border:#996666,input-label:#ffcccc' \
+    --color 'header-border:#6699cc,header-label:#99ccff'
+```
+
+This example demonstrates:
+- Using the `full` style preset
+- Custom labels for different sections
+- Dynamic label updates based on state
+- Color coordination across UI elements
+- Integration with preview window
+
+## Common layout patterns
+
+### Compact bottom layout
+
+```bash
+fzf --height 40% --layout reverse --info inline --border top
+```
+
+### Centered box
+
+```bash
+fzf --margin 10% --padding 2 --border rounded
+```
+
+### Minimal clean interface
+
+```bash
+fzf --style minimal --no-info --border none
+```
+
+### Full-featured layout
+
+```bash
+fzf --style full --border rounded --padding 1 --margin 1 \
+    --info inline-right --prompt '⚡ ' --pointer '▶' --marker '✓'
+```
+
+<Info>
+  You can set your preferred layout in `FZF_DEFAULT_OPTS` to apply it automatically:
+
+  ```bash
+  export FZF_DEFAULT_OPTS="--height 40% --layout reverse --border --info inline"
+  ```
+</Info>

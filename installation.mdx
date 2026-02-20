@@ -1,0 +1,301 @@
+---
+title: Installation
+description: Install fzf on macOS, Linux, Windows, and other platforms
+---
+
+fzf is distributed as a single binary and is available through multiple package managers. Choose the installation method that works best for your platform.
+
+## macOS
+
+### Using Homebrew
+
+The recommended way to install fzf on macOS:
+
+```bash
+brew install fzf
+```
+
+<Note>
+  After installation, you need to set up shell integration separately. See [Shell integration](#shell-integration) below.
+</Note>
+
+### Using MacPorts
+
+Alternatively, you can use MacPorts:
+
+```bash
+sudo port install fzf
+```
+
+## Linux
+
+### Package managers
+
+fzf is available in most Linux distribution package repositories:
+
+<Tabs>
+  <Tab title="Debian/Ubuntu">
+    ```bash
+    sudo apt install fzf
+    ```
+    
+    Available in Debian 9+ and Ubuntu 19.10+
+  </Tab>
+  
+  <Tab title="Arch Linux">
+    ```bash
+    sudo pacman -S fzf
+    ```
+  </Tab>
+  
+  <Tab title="Fedora">
+    ```bash
+    sudo dnf install fzf
+    ```
+  </Tab>
+  
+  <Tab title="Alpine Linux">
+    ```bash
+    sudo apk add fzf
+    ```
+  </Tab>
+  
+  <Tab title="openSUSE">
+    ```bash
+    sudo zypper install fzf
+    ```
+  </Tab>
+  
+  <Tab title="Gentoo">
+    ```bash
+    emerge --ask app-shells/fzf
+    ```
+  </Tab>
+</Tabs>
+
+### Other Linux distributions
+
+<CodeGroup>
+```bash NixOS
+nix-env -iA nixpkgs.fzf
+```
+
+```bash Void Linux
+sudo xbps-install -S fzf
+```
+
+```bash FreeBSD
+pkg install fzf
+```
+
+```bash NetBSD
+pkgin install fzf
+```
+
+```bash OpenBSD
+pkg_add fzf
+```
+</CodeGroup>
+
+### Using Conda
+
+Conda is available across all platforms:
+
+```bash
+conda install -c conda-forge fzf
+```
+
+## Windows
+
+fzf works on Windows through several package managers:
+
+<Tabs>
+  <Tab title="Chocolatey">
+    ```powershell
+    choco install fzf
+    ```
+  </Tab>
+  
+  <Tab title="Scoop">
+    ```powershell
+    scoop install fzf
+    ```
+  </Tab>
+  
+  <Tab title="Winget">
+    ```powershell
+    winget install fzf
+    ```
+  </Tab>
+  
+  <Tab title="MSYS2">
+    ```bash
+    pacman -S $MINGW_PACKAGE_PREFIX-fzf
+    ```
+  </Tab>
+</Tabs>
+
+## Using Mise
+
+[Mise](https://github.com/jdx/mise) is a cross-platform tool version manager:
+
+```bash
+mise use -g fzf@latest
+```
+
+## Using git
+
+Clone the repository and run the install script. This method provides the most control:
+
+```bash
+git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+~/.fzf/install
+```
+
+The install script will:
+- Add fzf to your `$PATH`
+- Set up shell integration (key bindings and fuzzy completion)
+- Prompt you for configuration options
+
+<Info>
+  This method is ideal if you want to customize the installation or contribute to fzf development.
+</Info>
+
+## Binary releases
+
+Download pre-built binaries directly from GitHub:
+
+1. Visit the [releases page](https://github.com/junegunn/fzf/releases)
+2. Download the binary for your platform
+3. Extract and move it to a directory in your `$PATH`
+
+```bash
+# Example for Linux
+wget https://github.com/junegunn/fzf/releases/download/v0.68.0/fzf-0.68.0-linux_amd64.tar.gz
+tar -xzf fzf-0.68.0-linux_amd64.tar.gz
+sudo mv fzf /usr/local/bin/
+```
+
+<Warning>
+  When using binary releases, you need to manually set up shell integration. See below.
+</Warning>
+
+## Shell integration
+
+Shell integration provides key bindings and fuzzy completion. Set it up after installation:
+
+<Tabs>
+  <Tab title="Bash">
+    Add to your `~/.bashrc`:
+    
+    ```bash
+    # Set up fzf key bindings and fuzzy completion
+    eval "$(fzf --bash)"
+    ```
+  </Tab>
+  
+  <Tab title="Zsh">
+    Add to your `~/.zshrc`:
+    
+    ```bash
+    # Set up fzf key bindings and fuzzy completion
+    source <(fzf --zsh)
+    ```
+  </Tab>
+  
+  <Tab title="Fish">
+    Add to your `~/.config/fish/config.fish`:
+    
+    ```fish
+    # Set up fzf key bindings
+    fzf --fish | source
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  The `--bash`, `--zsh`, and `--fish` options require fzf 0.48.0 or later. For older versions or finer control, source individual scripts from the `/shell` directory. Check your package documentation for file locations (e.g., `apt show fzf`).
+</Note>
+
+### Key bindings provided
+
+Shell integration adds these powerful key bindings:
+
+- **CTRL-T**: Paste selected files and directories onto the command line
+- **CTRL-R**: Search through command history
+- **ALT-C**: cd into selected directory
+
+### Disabling specific bindings
+
+You can selectively disable bindings by setting the corresponding command variable to empty:
+
+<CodeGroup>
+```bash Bash
+# Disable CTRL-R and ALT-C
+FZF_CTRL_R_COMMAND= FZF_ALT_C_COMMAND= eval "$(fzf --bash)"
+```
+
+```bash Zsh
+# Disable CTRL-R and ALT-C
+FZF_CTRL_R_COMMAND= FZF_ALT_C_COMMAND= source <(fzf --zsh)
+```
+
+```fish Fish
+# Disable CTRL-R and ALT-C
+fzf --fish | FZF_CTRL_R_COMMAND= FZF_ALT_C_COMMAND= source
+```
+</CodeGroup>
+
+<Warning>
+  Set these variables before sourcing the script. Setting them afterwards has no effect.
+</Warning>
+
+## Vim/Neovim plugin
+
+Integrate fzf into your Vim or Neovim workflow:
+
+### Using vim-plug
+
+Add to your Vim configuration:
+
+```vim
+Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
+Plug 'junegunn/fzf.vim'
+```
+
+- `junegunn/fzf` provides the basic library functions
+- `junegunn/fzf.vim` is a separate project with useful commands like `:Files`, `:Rg`, `:Buffers`
+
+For more details, see the [Vim integration guide](https://github.com/junegunn/fzf/blob/master/README-VIM.md).
+
+### For Neovim users
+
+<Tip>
+  If you prefer Lua-based plugins, check out [fzf-lua](https://github.com/ibhagwan/fzf-lua) for a native Neovim experience.
+</Tip>
+
+## Verifying installation
+
+After installation, verify fzf is working:
+
+```bash
+# Check version
+fzf --version
+
+# Try a basic search
+ls | fzf
+
+# Test with file tree
+find . | fzf
+```
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quick start" icon="rocket" href="/quickstart">
+    Learn the basics and create your first fzf workflows
+  </Card>
+  <Card title="Configuration" icon="gear" href="/essentials/configuration">
+    Customize fzf appearance and behavior
+  </Card>
+</CardGroup>

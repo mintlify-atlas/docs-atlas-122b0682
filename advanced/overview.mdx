@@ -1,0 +1,104 @@
+---
+title: Advanced topics
+description: Learn about advanced fzf features including dynamic reloading, external program execution, and performance optimization
+---
+
+fzf is an interactive Unix filter program designed to be used with other Unix tools. While it's useful even without knowing any options, you can build sophisticated interactive workflows once you learn its advanced features.
+
+## What you'll learn
+
+This section covers advanced fzf topics that help you create powerful, dynamic workflows:
+
+<CardGroup cols={2}>
+  <Card title="Ripgrep integration" icon="magnifying-glass" href="/advanced/ripgrep-integration">
+    Combine fzf with ripgrep for fast text search across files
+  </Card>
+  <Card title="Preview window" icon="window" href="/advanced/preview-window">
+    Display file contents and context in a split window
+  </Card>
+  <Card title="Dynamic reloading" icon="arrows-rotate" href="/advanced/dynamic-reload">
+    Update candidate lists dynamically without restarting fzf
+  </Card>
+  <Card title="Executing programs" icon="terminal" href="/advanced/executing-programs">
+    Run external commands and transform fzf into different processes
+  </Card>
+  <Card title="Performance" icon="gauge-high" href="/advanced/performance">
+    Optimize fzf for speed and efficiency
+  </Card>
+</CardGroup>
+
+## Core concepts
+
+### Interactive filtering
+
+fzf implements a fuzzy matching algorithm that lets you quickly type patterns with omitted characters and still get the results you want. Think of it as an interactive version of `grep`.
+
+```bash
+# Basic pipeline: list processes, select one, kill it
+ps -ef | fzf | awk '{print $2}' | xargs kill -9
+```
+
+### Event-action bindings
+
+fzf's power comes from its event-action binding mechanism. You can bind keys and events to actions that modify the interface, reload data, or execute programs.
+
+```bash
+fzf --bind 'ctrl-r:reload(ps -ef)' \
+    --bind 'enter:become(vim {})'
+```
+
+### Placeholder expressions
+
+fzf uses placeholder expressions to reference the selected items:
+
+- `{}` - The current line
+- `{1}`, `{2}`, etc. - Individual fields when using `--delimiter`
+- `{+}` - All selected items (multi-select mode)
+- `{q}` - The current query string
+- `{n}` - The line number
+
+<Tip>
+You can combine multiple actions using `+` to create complex behaviors:
+
+```bash
+fzf --bind 'ctrl-r:reload(ps -ef)+clear-query+first'
+```
+</Tip>
+
+## Getting started
+
+To master fzf's advanced features:
+
+<Steps>
+  <Step title="Understand the basics">
+    Make sure you're comfortable with basic fzf usage and command-line options. See the [Command options reference](/reference/command-options) for details.
+  </Step>
+  
+  <Step title="Explore examples">
+    Work through the examples in this section. Start with [Dynamic reloading](/advanced/dynamic-reload) to understand how to make fzf interactive.
+  </Step>
+  
+  <Step title="Learn key actions">
+    Focus on important actions like `reload`, `execute`, `become`, and `transform`. These are the building blocks for advanced workflows.
+  </Step>
+  
+  <Step title="Build your own">
+    Apply what you've learned to create custom workflows for your specific use cases.
+  </Step>
+</Steps>
+
+## Prerequisites
+
+Some advanced examples require additional tools:
+
+- **[ripgrep](https://github.com/BurntSushi/ripgrep)** - Fast text search across files
+- **[bat](https://github.com/sharkdp/bat)** - Syntax highlighting for file previews
+- **[fd](https://github.com/sharkdp/fd)** - Fast alternative to `find`
+
+<Note>
+This documentation requires fzf 0.59.0 or later. Some features may not be available in older versions.
+</Note>
+
+## Next steps
+
+Start with [Ripgrep integration](/advanced/ripgrep-integration) to learn how to combine fzf with ripgrep for powerful text search workflows.

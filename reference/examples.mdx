@@ -1,0 +1,566 @@
+---
+title: Examples and recipes
+description: Practical examples and real-world recipes for using fzf
+---
+
+This page provides practical, real-world examples of how to use fzf in your daily workflows.
+
+## Basic usage patterns
+
+### Interactive process killer
+
+Select and kill processes interactively:
+
+```sh
+ps -ef | fzf | awk '{print $2}' | xargs kill -9
+```
+
+**How it works:**
+1. `ps -ef` lists all processes
+2. `fzf` lets you select a process interactively
+3. `awk '{print $2}'` extracts the PID
+4. `xargs kill -9` kills the selected process
+
+<Tip>
+  A more robust approach using fzf's built-in features:
+  ```sh
+  ps -ef | fzf --bind 'enter:become(kill -9 {2})'
+  ```
+</Tip>
+
+### File opener
+
+Open files in your editor:
+
+```sh
+vim $(fzf)
+```
+
+Or use the `become` action to avoid issues with empty selections:
+
+```sh
+fzf --bind 'enter:become(vim {})'
+```
+
+### Multiple file selection
+
+Select multiple files to open:
+
+```sh
+fzf --multi --bind 'enter:become(vim {+})'
+```
+
+The `{+}` placeholder expands to all selected items.
+
+## File and directory navigation
+
+### Respecting .gitignore
+
+Use fd or ripgrep to respect `.gitignore` files:
+
+```sh
+# Using fd
+fd --type f --strip-cwd-prefix | fzf
+
+# Set as default
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+```
+
+### Including hidden files
+
+Search including hidden files while excluding `.git`:
+
+```sh
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
+```
+
+### Directory navigation with tree preview
+
+Navigate directories with a tree preview:
+
+```sh
+find * -type d | fzf --prompt 'Directories> ' \
+  --preview 'tree -C {} | head -200'
+```
+
+Or configure it for the ALT-C binding:
+
+```sh
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {}'"
+```
+
+## Git workflows
+
+### Interactive git checkout
+
+Checkout branches interactively:
+
+```sh
+git branch | fzf | xargs git checkout
+```
+
+### Browse git log and show commits
+
+View git log with preview of each commit:
+
+```sh
+git log --oneline | fzf --preview 'git show --color=always {1}'
+```
+
+### Open file at specific line from git grep
+
+Search code and open files at the matching line:
+
+```sh
+git grep --line-number . |
+  fzf --delimiter : --nth 3.. \
+      --bind 'enter:become(vim {1} +{2})'
+```
+
+**Breakdown:**
+- `{1}` is the filename
+- `{2}` is the line number
+- `vim {1} +{2}` opens the file at the specific line
+
+### Files from git status
+
+Select files from `git status`:
+
+```sh
+git status --short | fzf -m | awk '{print $2}' | xargs git add
+```
+
+<Info>
+  For more comprehensive git integration, check out [fzf-git.sh](https://github.com/junegunn/fzf-git.sh), which provides key bindings for git objects like branches (CTRL-G CTRL-B), commits (CTRL-G CTRL-H), and files (CTRL-G CTRL-F).
+</Info>
+
+## Ripgrep integration
+
+### Basic ripgrep with fzf filtering
+
+Search with ripgrep, then filter with fzf:
+
+```sh
+rg --color=always --line-number --no-heading --smart-case "pattern" |
+  fzf --ansi \
+      --delimiter : \
+      --preview 'bat --color=always {1} --highlight-line {2}' \
+      --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+      --bind 'enter:become(vim {1} +{2})'
+```
+
+**Preview window breakdown:**
+- `up` - Position at top
+- `60%` - Height
+- `border-bottom` - Border only at bottom
+- `+{2}+3/3` - Scroll offset (line number + 3 lines, positioned at 1/3)
+- `~3` - Fixed header (first 3 lines always visible)
+
+### Interactive ripgrep launcher
+
+Ripgrep restarts with each query change:
+
+```sh
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+INITIAL_QUERY="${*:-}"
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --bind "start:reload:$RG_PREFIX {q}" \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --delimiter : \
+    --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+    --bind 'enter:become(vim {1} +{2})'
+```
+
+**Key features:**
+- `--disabled` - fzf doesn't filter, ripgrep does
+- `change:reload` - Restarts ripgrep on every keystroke
+- `sleep 0.1` - Debouncing to reduce load
+- `|| true` - Suppress errors when no matches found
+
+### Two-phase filtering (Ripgrep then fzf)
+
+Switch between ripgrep mode and fzf filtering:
+
+```sh
+rm -f /tmp/rg-fzf-{r,f}
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+INITIAL_QUERY="${*:-}"
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --bind "start:reload:$RG_PREFIX {q}" \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --bind 'ctrl-t:transform:[[ ! $FZF_PROMPT =~ ripgrep ]] &&
+      echo "rebind(change)+change-prompt(1. ripgrep> )+disable-search+transform-query:echo \{q} > /tmp/rg-fzf-f; cat /tmp/rg-fzf-r" ||
+      echo "unbind(change)+change-prompt(2. fzf> )+enable-search+transform-query:echo \{q} > /tmp/rg-fzf-r; cat /tmp/rg-fzf-f"' \
+    --color "hl:-1:underline,hl+:-1:underline:reverse" \
+    --prompt '1. ripgrep> ' \
+    --delimiter : \
+    --header 'CTRL-T: Switch between ripgrep/fzf' \
+    --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3,~3' \
+    --bind 'enter:become(vim {1} +{2})'
+```
+
+Press CTRL-T to toggle between:
+1. **Ripgrep mode**: Fast, exact search across all files
+2. **fzf mode**: Fuzzy filtering of current results
+
+## Dynamic reloading
+
+### Updating process list
+
+Update the process list without restarting fzf:
+
+```sh
+(date; ps -ef) |
+  fzf --bind='ctrl-r:reload(date; ps -ef)' \
+      --header=$'Press CTRL-R to reload\n\n' --header-lines=2 \
+      --preview='echo {}' --preview-window=down,3,wrap \
+      --layout=reverse --height=80%
+```
+
+### Toggling between data sources
+
+Switch between files and directories:
+
+```sh
+find * | fzf --prompt 'All> ' \
+  --header 'CTRL-D: Directories / CTRL-F: Files' \
+  --bind 'ctrl-d:change-prompt(Directories> )+reload(find * -type d)' \
+  --bind 'ctrl-f:change-prompt(Files> )+reload(find * -type f)'
+```
+
+### Single key toggle
+
+Toggle between two sources with one key:
+
+```sh
+fd --type file |
+  fzf --prompt 'Files> ' \
+      --header 'CTRL-T: Switch between Files/Directories' \
+      --bind 'ctrl-t:transform:[[ ! $FZF_PROMPT =~ Files ]] &&
+              echo "change-prompt(Files> )+reload(fd --type file)" ||
+              echo "change-prompt(Directories> )+reload(fd --type directory)"' \
+      --preview '[[ $FZF_PROMPT =~ Files ]] && bat --color=always {} || tree -C {}'
+```
+
+## Log tailing
+
+### Kubernetes pod logs
+
+Browse pods and tail logs:
+
+```bash
+pods() {
+  command='kubectl get pods --all-namespaces' fzf \
+    --info=inline --layout=reverse --header-lines=1 \
+    --prompt "$(kubectl config current-context | sed 's/-context$//')> " \
+    --header $'╱ Enter (kubectl exec) ╱ CTRL-O (open log in editor) ╱ CTRL-R (reload) ╱\n\n' \
+    --bind 'start,ctrl-r:reload:$command' \
+    --bind 'ctrl-/:change-preview-window(80%,border-bottom|hidden|)' \
+    --bind 'enter:execute:kubectl exec -it --namespace {1} {2} -- bash' \
+    --bind 'ctrl-o:execute:${EDITOR:-vim} <(kubectl logs --all-containers --namespace {1} {2})' \
+    --preview-window up:follow \
+    --preview 'kubectl logs --follow --all-containers --tail=10000 --namespace {1} {2}' "$@"
+}
+```
+
+**Features:**
+- Preview window follows log output (like `tail -f`)
+- CTRL-R to reload pod list
+- Enter to exec into pod
+- CTRL-O to open logs in editor
+- CTRL-/ to toggle preview window
+
+<Warning>
+  Limit log output with `--tail` to prevent high memory usage when using `--follow`.
+</Warning>
+
+### Following command output
+
+Watch any command output update in real-time:
+
+```bash
+fzf --preview-window follow --preview 'for i in $(seq 100000); do
+  echo "$i"
+  sleep 0.01
+  (( i % 300 == 0 )) && printf "\033[2J"
+done'
+```
+
+`\033[2J` is an ANSI escape sequence that clears the preview screen.
+
+## Preview window examples
+
+### File preview with bat
+
+Preview files with syntax highlighting:
+
+```sh
+fzf --preview 'bat --color=always {}' --preview-window '~3'
+```
+
+### File type detection
+
+Different preview for files vs directories:
+
+```sh
+fzf --preview '[[ -f {} ]] && bat --color=always {} || tree -C {}'
+```
+
+### Multi-line preview with context
+
+Show file with context around the matched line:
+
+```sh
+fzf --preview 'bat --color=always {1} --highlight-line {2}' \
+    --preview-window 'up,60%,border-bottom,+{2}+3/3,~3'
+```
+
+### Image preview
+
+Preview images in supported terminals:
+
+```sh
+fzf --preview 'fzf-preview.sh {}'
+```
+
+Supported protocols:
+- Kitty graphics protocol
+- iTerm2 inline images protocol
+- Sixel
+
+## Custom completions
+
+### Custom command completion
+
+Define custom fuzzy completion:
+
+```sh
+# Custom completion for "doge" command
+_fzf_complete_doge() {
+  _fzf_complete --multi --reverse --prompt="doge> " -- "$@" < <(
+    echo very
+    echo wow
+    echo such
+    echo doge
+  )
+}
+
+# For bash, register the completion
+[ -n "$BASH" ] && complete -F _fzf_complete_doge -o default -o bashdefault doge
+```
+
+### Git command completion
+
+Customize git subcommand completion (fish example):
+
+```fish
+function _fzf_complete_git
+  switch $argv[2]
+    case checkout switch
+      _fzf_complete --reverse --no-preview -- $argv < (git branch --all --format='%(refname:short)' | psub)
+
+    case add
+      function _fzf_complete_git_post
+        awk '{print $NF}'
+      end
+      _fzf_complete --multi --reverse -- $argv < (git status --short | psub)
+
+    case show log diff
+      function _fzf_complete_git_post
+        awk '{print $1}'
+      end
+      _fzf_complete --reverse --no-sort --preview='git show --color=always {1}' -- $argv < (git log --oneline | psub)
+  end
+
+  functions -e _fzf_complete_git_post
+end
+```
+
+## Shell integration customization
+
+### Customizing CTRL-T
+
+Add preview and skip directories:
+
+```sh
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'"
+```
+
+### Customizing CTRL-R
+
+Add clipboard copy to command history:
+
+```sh
+export FZF_CTRL_R_OPTS="
+  --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+  --color header:italic
+  --header 'Press CTRL-Y to copy command into clipboard'"
+```
+
+### Customizing ALT-C
+
+Preview directory contents:
+
+```sh
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {}'"
+```
+
+### Custom preview based on command
+
+Different previews for different commands:
+
+```sh
+_fzf_comprun() {
+  local command=$1
+  shift
+
+  case "$command" in
+    cd)           fzf --preview 'tree -C {} | head -200'   "$@" ;;
+    export|unset) fzf --preview "eval 'echo \$'{}"
+         "$@" ;;
+    ssh)          fzf --preview 'dig {}'                   "$@" ;;
+    *)            fzf --preview 'bat -n --color=always {}' "$@" ;;
+  esac
+}
+```
+
+## Display modes
+
+### Height mode with borders
+
+Open fzf below the cursor:
+
+```sh
+fzf --height 40% --layout reverse --border
+```
+
+### tmux popup
+
+Open fzf in a tmux popup (requires tmux 3.3+):
+
+```sh
+# Center popup, 70% width and height
+fzf --tmux 70%
+
+# Bottom popup, 100% width, 60% height
+fzf --tmux 100%,60%
+
+# Right side, 50% width
+fzf --tmux right
+
+# Left side, 40% width and 70% height
+fzf --tmux left,40%,70%
+```
+
+### Combined default options
+
+Set defaults that work in and out of tmux:
+
+```sh
+export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
+```
+
+This uses tmux popup when available, falls back to height mode otherwise.
+
+## Advanced key bindings
+
+### Execute without leaving fzf
+
+Open file with less:
+
+```sh
+fzf --bind 'f1:execute(less -f {})'
+```
+
+### Copy to clipboard
+
+Copy selected item and exit:
+
+```sh
+fzf --bind 'ctrl-y:execute-silent(echo {} | pbcopy)+abort'
+```
+
+### Multiple actions on one key
+
+Chain multiple actions:
+
+```sh
+fzf --bind 'ctrl-y:execute-silent(echo {} | pbcopy)+clear-query+first'
+```
+
+This copies the item, clears the query, and jumps to the first item.
+
+### Different editors for different keys
+
+Open with different programs:
+
+```sh
+fzf --bind 'enter:become(vim {})' \
+    --bind 'ctrl-e:become(emacs {})' \
+    --bind 'ctrl-o:execute(open {})'
+```
+
+## Best practices
+
+<CardGroup cols={2}>
+  <Card title="Don't add --preview to FZF_DEFAULT_OPTS" icon="triangle-exclamation">
+    Preview commands designed for files won't work with other inputs:
+    ```sh
+    # Bad
+    export FZF_DEFAULT_OPTS='--preview "bat {}"'
+    ps -ef | fzf  # Will fail
+    ```
+  </Card>
+
+  <Card title="Use xargs for robust argument handling" icon="check">
+    Better than command substitution:
+    ```sh
+    # Better
+    fzf --print0 | xargs -0 -o vim
+
+    # Or use become
+    fzf --bind 'enter:become(vim {})'
+    ```
+  </Card>
+
+  <Card title="Prefer become over command substitution" icon="check">
+    Handles edge cases better:
+    - No empty file when you press CTRL-C
+    - No empty file on empty selection
+    - Handles spaces in filenames
+  </Card>
+
+  <Card title="Use --disabled for external filtering" icon="lightbulb">
+    When using ripgrep or other tools for filtering:
+    ```sh
+    fzf --disabled --bind 'change:reload(rg {q})'
+    ```
+  </Card>
+</CardGroup>
+
+## More examples
+
+<CardGroup cols={2}>
+  <Card title="Wiki Examples" icon="book-open" href="https://github.com/junegunn/fzf/wiki/examples">
+    Community-maintained collection of examples
+  </Card>
+  <Card title="Advanced Examples" icon="code" href="https://github.com/junegunn/fzf/blob/master/ADVANCED.md">
+    Official advanced examples document
+  </Card>
+  <Card title="fzf-git.sh" icon="git" href="https://github.com/junegunn/fzf-git.sh">
+    Git integration key bindings
+  </Card>
+  <Card title="fzf Theme Playground" icon="palette" href="https://vitormv.github.io/fzf-themes/">
+    Interactive theme creator
+  </Card>
+</CardGroup>

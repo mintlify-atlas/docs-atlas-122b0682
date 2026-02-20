@@ -1,0 +1,180 @@
+---
+title: Basic usage
+description: Learn how to use fzf as an interactive filter for any kind of list
+---
+
+fzf is a general-purpose command-line fuzzy finder. It reads a list from STDIN, allows you to interactively select items, and writes the selected items to STDOUT.
+
+## Using fzf with STDIN
+
+You can pipe any list to fzf for interactive filtering:
+
+```bash
+find * -type f | fzf > selected
+```
+
+This command finds all files in the current directory and lets you select one. The selected file path is written to a file called `selected`.
+
+## Using fzf without STDIN
+
+When you run fzf without piping input to it, it automatically traverses the file system under the current directory:
+
+```bash
+vim $(fzf)
+```
+
+<Note>
+You can override the default behavior by setting `$FZF_DEFAULT_COMMAND` to a command that generates your desired list, or by setting `--walker`, `--walker-root`, and `--walker-skip` options in `$FZF_DEFAULT_OPTS`.
+</Note>
+
+<Warning>
+A more robust solution would be to use `xargs` to handle special characters and whitespace properly:
+
+```bash
+fzf --print0 | xargs -0 -o vim
+```
+</Warning>
+
+## Using the become action
+
+fzf has the ability to turn itself into a different process using the `become` action:
+
+```bash
+fzf --bind 'enter:become(vim {})'
+```
+
+This approach has several advantages over command substitution:
+
+<Steps>
+
+### Handles CTRL-C gracefully
+
+Vim will not open an empty file when you terminate fzf with CTRL-C.
+
+### Handles empty results
+
+Vim will not open an empty file when you press ENTER on an empty result.
+
+### Handles whitespace in filenames
+
+You can handle multiple selections even when they have whitespaces:
+
+```bash
+fzf --multi --bind 'enter:become(vim {+})'
+```
+
+</Steps>
+
+## Interactive controls
+
+When fzf is running, you can use these controls:
+
+<Tabs>
+  <Tab title="Navigation">
+    - **CTRL-K** / **CTRL-J** (or **CTRL-P** / **CTRL-N**) - Move cursor up and down
+    - **Enter** - Select the item and exit
+    - **CTRL-C** / **CTRL-G** / **ESC** - Exit without selecting
+  </Tab>
+  <Tab title="Multi-select">
+    In multi-select mode (`-m` or `--multi`):
+    - **TAB** - Mark/unmark item
+    - **Shift-TAB** - Mark/unmark item (reverse direction)
+  </Tab>
+  <Tab title="Mouse">
+    - **Scroll** - Navigate through the list
+    - **Click** - Select item
+    - **Double-click** - Select and exit
+    - **Shift-click** and **Shift-scroll** - Multi-select operations
+  </Tab>
+  <Tab title="Editing">
+    fzf supports Emacs-style key bindings for editing the query:
+    - **CTRL-A** - Move to beginning of line
+    - **CTRL-E** - Move to end of line
+    - **CTRL-W** - Delete word backward
+    - **ALT-D** - Delete word forward
+  </Tab>
+</Tabs>
+
+## Environment variables
+
+You can customize fzf's behavior using environment variables:
+
+### FZF_DEFAULT_COMMAND
+
+Default command to use when input is tty:
+
+```bash
+export FZF_DEFAULT_COMMAND='fd --type f'
+```
+
+<Note>
+`FZF_DEFAULT_COMMAND` is not used by shell integration. For shell key bindings, use `FZF_CTRL_T_COMMAND`, `FZF_ALT_C_COMMAND`, or override `fzf_compgen_path()` and `fzf_compgen_dir()` functions.
+</Note>
+
+### FZF_DEFAULT_OPTS
+
+Default options for fzf:
+
+```bash
+export FZF_DEFAULT_OPTS="--layout=reverse --inline-info"
+```
+
+### FZF_DEFAULT_OPTS_FILE
+
+If you prefer to manage default options in a file:
+
+```bash
+export FZF_DEFAULT_OPTS_FILE=~/.fzfrc
+```
+
+## Common use cases
+
+<Accordion title="Opening files in your editor">
+  ```bash
+  vim $(fzf)
+  ```
+  
+  Or using the `become` action:
+  ```bash
+  fzf --bind 'enter:become(vim {})'
+  ```
+</Accordion>
+
+<Accordion title="Killing a process">
+  ```bash
+  ps -ef | fzf | awk '{print $2}' | xargs kill -9
+  ```
+</Accordion>
+
+<Accordion title="Checking out a git branch">
+  ```bash
+  git branch | fzf | xargs git checkout
+  ```
+</Accordion>
+
+<Accordion title="Searching command history">
+  ```bash
+  history | fzf
+  ```
+  
+  Or use the built-in CTRL-R binding after setting up shell integration.
+</Accordion>
+
+## Example workflows
+
+Here's a complete example combining multiple fzf features:
+
+```bash
+# Search for text in files using ripgrep, then open in vim
+rg --color=always --line-number --no-heading --smart-case "search term" |
+  fzf --ansi \
+      --delimiter : \
+      --preview 'bat --color=always {1} --highlight-line {2}' \
+      --bind 'enter:become(vim {1} +{2})'
+```
+
+This command:
+1. Searches for text using ripgrep
+2. Displays results with ANSI colors
+3. Shows a preview with syntax highlighting using bat
+4. Opens the selected file in vim at the correct line number

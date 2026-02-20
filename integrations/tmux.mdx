@@ -1,0 +1,445 @@
+---
+title: tmux integration
+description: Use fzf in tmux popup windows and panes with the --tmux option and fzf-tmux wrapper
+---
+
+fzf provides excellent integration with tmux, allowing you to run fzf in popup windows or split panes. This integration makes fzf feel like a native part of your tmux workflow.
+
+## tmux popup mode (`--tmux`)
+
+The `--tmux` option (added in fzf 0.53.0) opens fzf in a tmux popup window. This is the recommended way to use fzf with tmux for modern tmux versions.
+
+### Basic usage
+
+```bash
+fzf --tmux center
+```
+
+When you're not in tmux, the `--tmux` option is silently ignored, making it safe to use in your shell configuration.
+
+### Position and size syntax
+
+```bash
+--tmux [center|top|bottom|left|right][,SIZE[%]][,SIZE[%]]
+```
+
+<Tabs>
+  <Tab title="Position">
+    Specify where the popup appears:
+    - `center` (default)
+    - `top`
+    - `bottom`
+    - `left`
+    - `right`
+  </Tab>
+  <Tab title="Size">
+    Specify dimensions as percentages or absolute values:
+    - Single percentage: `80%` (applies to both width and height for center, or relevant dimension for edges)
+    - Two percentages: `100%,50%` (width, height)
+    - Mix of values: `80%,20` (percentage width, absolute height in lines)
+  </Tab>
+</Tabs>
+
+### Examples
+
+<CodeGroup>
+```bash Center popup
+# Center popup, 50% width and height (default)
+fzf --tmux center
+
+# Center popup, 80% width and height
+fzf --tmux 80%
+
+# Center popup, 100% width and 50% height
+fzf --tmux 100%,50%
+```
+
+```bash Edge popups
+# Left side, 40% width
+fzf --tmux left,40%
+
+# Left side, 40% width, 90% height
+fzf --tmux left,40%,90%
+
+# Top, 40% height
+fzf --tmux top,40%
+
+# Bottom, 80% width, 40% height
+fzf --tmux bottom,80%,40%
+```
+
+```bash Right sidebar
+# Right side with 50% width
+find . -type f | fzf --tmux right,50%
+
+# Right side with preview
+find . -type f | fzf --tmux right,60% --preview 'bat --color=always {}'
+```
+</CodeGroup>
+
+### Use as default
+
+You can make tmux popup mode the default by adding it to `FZF_DEFAULT_OPTS`:
+
+```bash
+# Use tmux popup if in tmux, otherwise use height mode
+export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse --border top'
+```
+
+<Info>
+When both `--height` and `--tmux` are specified, fzf uses `--tmux` when running inside tmux, and falls back to `--height` otherwise.
+</Info>
+
+### Configure for key bindings
+
+You can set different tmux layouts for different shell key bindings:
+
+```bash
+# Global default
+export FZF_DEFAULT_OPTS='--tmux bottom,40%'
+
+# Per-binding customization
+export FZF_CTRL_T_OPTS='--tmux right,60% --preview "bat --color=always {}"'
+export FZF_CTRL_R_OPTS='--tmux bottom,60%'
+export FZF_ALT_C_OPTS='--tmux bottom,50% --preview "tree -C {}"'
+```
+
+## fzf-tmux wrapper script
+
+For older tmux versions (before 3.2) or when you need more control, use the `fzf-tmux` wrapper script. This script creates tmux splits instead of popups.
+
+<Warning>
+The `fzf-tmux` script is considered legacy. If you have tmux 3.2 or later, use the `--tmux` option instead.
+</Warning>
+
+### Installation
+
+The `fzf-tmux` script is included with fzf and should be available in your PATH after installation.
+
+```bash
+# Verify fzf-tmux is available
+which fzf-tmux
+```
+
+### Basic usage
+
+```bash
+# Open in split pane below (40% height)
+fzf-tmux -d 40%
+
+# Open in split pane on the right (60% width)
+fzf-tmux -r 60%
+
+# Open in split pane above (10 lines)
+fzf-tmux -u 10
+
+# Open in split pane on the left (30% width)
+fzf-tmux -l 30%
+```
+
+### Options
+
+<Info>
+The `fzf-tmux` script accepts all standard fzf options. Position and size options are specific to `fzf-tmux`.
+</Info>
+
+| Option | Description | Example |
+|--------|-------------|--------|
+| `-u SIZE[%]` | Split above, with SIZE height | `fzf-tmux -u 40%` |
+| `-d SIZE[%]` | Split below, with SIZE height | `fzf-tmux -d 40%` |
+| `-l SIZE[%]` | Split left, with SIZE width | `fzf-tmux -l 30%` |
+| `-r SIZE[%]` | Split right, with SIZE width | `fzf-tmux -r 50%` |
+| `-p SIZE[%]` | Use tmux popup (requires tmux 3.2+) | `fzf-tmux -p 80%` |
+| `-w SIZE[%]` | Popup width | `fzf-tmux -p -w 90%` |
+| `-h SIZE[%]` | Popup height | `fzf-tmux -p -h 70%` |
+| `-x COL` | Popup x position | `fzf-tmux -p -x 10` |
+| `-y ROW` | Popup y position | `fzf-tmux -p -y 5` |
+
+### Examples
+
+<Steps>
+  <Step title="File finder with preview">
+    ```bash
+    find . -type f | fzf-tmux -r 70% --preview 'bat --color=always {}'
+    ```
+    Opens a right split (70% width) with file preview using bat.
+  </Step>
+  <Step title="Git branch selector">
+    ```bash
+    git branch | fzf-tmux -d 40% | xargs git checkout
+    ```
+    Opens a bottom split (40% height) to select and checkout a git branch.
+  </Step>
+  <Step title="Process killer">
+    ```bash
+    ps aux | fzf-tmux -u 50% -m | awk '{print $2}' | xargs kill
+    ```
+    Opens a top split (50% height) for multi-selecting processes to kill.
+  </Step>
+</Steps>
+
+### Using in shell key bindings
+
+You can configure shell integration to use `fzf-tmux` instead of plain `fzf`:
+
+```bash
+# Set FZF_TMUX to 1 to use fzf-tmux by default
+export FZF_TMUX=1
+export FZF_TMUX_HEIGHT=40%
+
+# Or use FZF_TMUX_OPTS for more control
+export FZF_TMUX_OPTS='-d 40%'
+```
+
+When `FZF_TMUX` is set, the shell key bindings (`CTRL-T`, `CTRL-R`, `ALT-C`) will use `fzf-tmux` instead of `fzf`.
+
+## Comparison: `--tmux` vs `fzf-tmux`
+
+<Tabs>
+  <Tab title="--tmux option">
+    **Advantages:**
+    - Native fzf option (no wrapper needed)
+    - Works with tmux 3.2+
+    - Cleaner syntax
+    - Popup windows feel more integrated
+    - Recommended for modern setups
+
+    **Usage:**
+    ```bash
+    fzf --tmux bottom,40%
+    export FZF_DEFAULT_OPTS='--tmux center,80%'
+    ```
+  </Tab>
+  <Tab title="fzf-tmux script">
+    **Advantages:**
+    - Works with older tmux versions
+    - Uses splits instead of popups
+    - More positioning options
+    - Useful for complex layouts
+
+    **Usage:**
+    ```bash
+    fzf-tmux -d 40%
+    export FZF_TMUX=1
+    export FZF_TMUX_OPTS='-d 40%'
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+If you have tmux 3.2 or later, prefer the `--tmux` option. Only use `fzf-tmux` if you need split panes or have an older tmux version.
+</Tip>
+
+## Practical examples
+
+### Directory navigator
+
+Navigate to directories using fzf in a tmux popup:
+
+```bash
+cd_with_fzf() {
+  cd "$(fd --type d | fzf --tmux bottom,50% --preview 'tree -C {} | head -100')"
+}
+
+# Bind to Alt-G in bash/zsh
+bind '"\eg": "cd_with_fzf\n"'
+```
+
+### Git log browser
+
+Browse git commits with preview:
+
+```bash
+git log --oneline --color=always | 
+  fzf --tmux center,90%,70% \
+      --ansi \
+      --preview 'git show --color=always {1}' \
+      --preview-window=right,60% \
+      --bind 'enter:become(git show {1})'
+```
+
+### Session switcher
+
+Quickly switch between tmux sessions:
+
+```bash
+tmux-switch() {
+  tmux list-sessions -F '#S' | 
+    fzf --tmux bottom,40% \
+        --preview 'tmux capture-pane -ep -t {}' \
+        --bind 'enter:execute(tmux switch-client -t {})+abort'
+}
+```
+
+### Docker container manager
+
+Manage Docker containers with fzf:
+
+```bash
+# Stop containers
+docker ps | 
+  fzf --tmux right,60% \
+      --header-lines=1 \
+      --multi \
+      --preview 'docker logs --tail 100 {1}' | 
+  awk '{print $1}' | 
+  xargs docker stop
+
+# Remove containers
+docker ps -a | 
+  fzf --tmux center,80% \
+      --header-lines=1 \
+      --multi \
+      --preview 'docker inspect {1}' | 
+  awk '{print $1}' | 
+  xargs docker rm
+```
+
+### Window/Pane selector
+
+Jump to any tmux pane:
+
+```bash
+tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_current_path} #{pane_current_command}' | 
+  fzf --tmux center \
+      --preview 'tmux capture-pane -ep -t {1}' \
+      --bind 'enter:execute(tmux select-pane -t {1})+abort'
+```
+
+## Configuration examples
+
+### Universal tmux setup
+
+A configuration that works whether you're in tmux or not:
+
+```bash
+# .bashrc or .zshrc
+if [[ -n "$TMUX" ]]; then
+  # In tmux: use popup mode
+  export FZF_DEFAULT_OPTS='
+    --tmux bottom,40%
+    --layout reverse
+    --border top
+    --preview-window border-left'
+else
+  # Not in tmux: use height mode
+  export FZF_DEFAULT_OPTS='
+    --height 40%
+    --layout reverse
+    --border
+    --preview-window border-left'
+fi
+```
+
+### Per-binding tmux configuration
+
+```bash
+# Different layouts for different bindings
+export FZF_DEFAULT_OPTS='--tmux center,80%'
+
+# File finder: right sidebar with large preview
+export FZF_CTRL_T_OPTS='
+  --tmux right,60%
+  --preview "bat -n --color=always --line-range :500 {}"
+  --bind "ctrl-/:change-preview-window(down,70%|hidden|)"'
+
+# Command history: bottom panel
+export FZF_CTRL_R_OPTS='
+  --tmux bottom,60%
+  --layout reverse
+  --preview "echo {}" --preview-window down:3:hidden:wrap
+  --bind "ctrl-/:toggle-preview"'
+
+# Directory changer: bottom panel with tree preview
+export FZF_ALT_C_OPTS='
+  --tmux bottom,50%
+  --preview "tree -C {} | head -200"'
+```
+
+## Vim integration with tmux
+
+Configure fzf.vim to use tmux popups:
+
+```vim
+" Use tmux popup if in tmux (requires tmux 3.2+)
+if exists('$TMUX')
+  let g:fzf_layout = { 'tmux': '90%,70%' }
+else
+  let g:fzf_layout = { 'window': { 'width': 0.9, 'height': 0.6 } }
+endif
+```
+
+See the [Vim plugin documentation](/integrations/vim-plugin#using-tmux-popup-mode) for more details.
+
+## Troubleshooting
+
+### Popup not appearing
+
+<Steps>
+  <Step title="Check tmux version">
+    ```bash
+    tmux -V
+    ```
+    You need tmux 3.2 or later for popup support with `--tmux`.
+  </Step>
+  <Step title="Verify you're in tmux">
+    ```bash
+    echo $TMUX
+    ```
+    Should output a path if you're in a tmux session.
+  </Step>
+  <Step title="Test basic popup">
+    ```bash
+    echo "test" | fzf --tmux center
+    ```
+  </Step>
+</Steps>
+
+### Colors not displaying correctly
+
+Enable true color support in tmux:
+
+```bash
+# Add to ~/.tmux.conf
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",*256col*:Tc"
+```
+
+### Popup too small
+
+Increase the popup size:
+
+```bash
+# Use larger percentages
+fzf --tmux center,95%,90%
+
+# Or set in FZF_DEFAULT_OPTS
+export FZF_DEFAULT_OPTS='--tmux center,95%,90%'
+```
+
+## Best practices
+
+<Tip>
+**Use `--tmux` in your default options** with a fallback to `--height`:
+
+```bash
+export FZF_DEFAULT_OPTS='--height 40% --tmux bottom,40% --layout reverse'
+```
+
+This works everywhere - in tmux you get popups, outside tmux you get height mode.
+</Tip>
+
+<Tip>
+**Match your border style** to your tmux configuration:
+
+```bash
+export FZF_DEFAULT_OPTS='--tmux center --border rounded'
+```
+</Tip>
+
+<Tip>
+**Use position-appropriate layouts** for different bindings:
+- File finder: Right sidebar for large preview (`--tmux right,60%`)
+- History search: Bottom panel for context (`--tmux bottom,60%`)
+- Quick selections: Center popup for focus (`--tmux center`)
+</Tip>

@@ -1,0 +1,897 @@
+---
+title: Key bindings and actions
+description: Complete reference for key bindings, events, and available actions in fzf
+---
+
+fzf provides a powerful key binding system that allows you to bind keys and events to actions using the `--bind` option.
+
+## Binding syntax
+
+The `--bind` option takes a comma-separated list of binding expressions:
+
+```bash
+--bind KEY:ACTION
+--bind EVENT:ACTION
+--bind KEY1,KEY2,EVENT:ACTION
+```
+
+**Examples:**
+
+```bash
+fzf --bind=ctrl-j:accept,ctrl-k:kill-line
+fzf --bind 'ctrl-a:select-all+accept'
+fzf --bind 'ctrl-r:reload(ps -ef)'
+```
+
+## Available keys
+
+You can bind actions to these keys:
+
+### Letter and modifier keys
+
+- `ctrl-[a-z]` - Control key combinations
+- `ctrl-space` - Control + space
+- `ctrl-\` - Control + backslash
+- `ctrl-]` - Control + right bracket
+- `ctrl-^` or `ctrl-6` - Control + caret
+- `ctrl-/` or `ctrl-_` - Control + slash
+- `alt-[*]` - Alt + any single character
+- `ctrl-alt-[a-z]` - Control + Alt combinations
+
+### Function keys
+
+- `f1` through `f12` - Function keys
+
+### Navigation keys
+
+- `up`, `down`, `left`, `right` - Arrow keys
+- `home`, `end` - Home and End keys
+- `page-up` or `pgup`, `page-down` or `pgdn` - Page navigation
+- `insert` - Insert key
+- `delete` or `del` - Delete key
+
+### Special keys
+
+- `enter` or `return` - Enter key
+- `space` - Space bar
+- `backspace`, `bspace`, or `bs` - Backspace
+- `tab` - Tab key
+- `shift-tab` or `btab` - Shift + Tab
+- `esc` - Escape key
+
+### Shift combinations
+
+- `shift-up`, `shift-down`, `shift-left`, `shift-right`
+- `shift-home`, `shift-end`
+- `shift-delete`, `shift-page-up`, `shift-page-down`
+
+### Alt combinations
+
+- `alt-enter` - Alt + Enter
+- `alt-space` - Alt + Space
+- `alt-up`, `alt-down`, `alt-left`, `alt-right`
+- `alt-home`, `alt-end`, `alt-delete`
+- `alt-backspace`, `alt-bspace`, or `alt-bs`
+- `alt-page-up`, `alt-page-down`
+- `alt-shift-up`, `alt-shift-down`, etc.
+
+### Ctrl combinations
+
+- `ctrl-up`, `ctrl-down`, `ctrl-left`, `ctrl-right`
+- `ctrl-home`, `ctrl-end`, `ctrl-delete`
+- `ctrl-backspace`, `ctrl-bspace`, or `ctrl-bs`
+- `ctrl-page-up`, `ctrl-page-down`
+- `ctrl-shift-up`, `ctrl-shift-down`, etc.
+
+### Multi-modifier combinations
+
+- `ctrl-alt-up`, `ctrl-alt-down`, etc.
+- `ctrl-alt-shift-up`, `ctrl-alt-shift-down`, etc.
+
+### Mouse events
+
+- `left-click`, `right-click`, `double-click`
+- `scroll-up`, `scroll-down`
+- `shift-left-click`, `shift-right-click`
+- `shift-scroll-up`, `shift-scroll-down`
+- `preview-scroll-up`, `preview-scroll-down`
+
+<Note>
+  Some terminal emulators may not support all key combinations, especially `ctrl-*` bindings.
+</Note>
+
+## Available events
+
+Events are triggered at specific times during fzf execution.
+
+### start
+
+Triggered once when fzf starts.
+
+```bash
+# Move cursor to the last item and select all
+seq 1000 | fzf --multi --sync --bind start:last+select-all
+```
+
+<Info>
+  The input list is not available unless you use `--sync`.
+</Info>
+
+### load
+
+Triggered when the input stream is complete and initial processing is done.
+
+```bash
+(seq 10; sleep 1; seq 11 20) | fzf --prompt 'Loading> ' \
+  --bind 'load:change-prompt:Loaded> '
+```
+
+### change
+
+Triggered whenever the query string is changed.
+
+```bash
+# Move cursor to the first entry when query changes
+fzf --bind change:first
+```
+
+### result
+
+Triggered when filtering is complete and the result list is ready.
+
+```bash
+# Put cursor on second item when query is empty
+fzf --sync --bind 'result:transform:[[ -z {q} ]] && echo "pos(2)"'
+```
+
+### focus
+
+Triggered when focus changes due to cursor movement or search result update.
+
+```bash
+fzf --bind 'focus:transform-preview-label:echo [ {} ]' --preview 'cat {}'
+```
+
+<Warning>
+  Actions bound to `focus` run synchronously and can make the interface sluggish. Avoid slow commands.
+</Warning>
+
+### resize
+
+Triggered when terminal size changes.
+
+```bash
+fzf --bind 'resize:transform-header:echo Resized: ${FZF_COLUMNS}x${FZF_LINES}'
+```
+
+### one
+
+Triggered when there's only one match.
+
+```bash
+# Automatically select the only match
+seq 10 | fzf --bind one:accept
+```
+
+### zero
+
+Triggered when there's no match.
+
+```bash
+# Reload when there's no match
+echo $RANDOM | fzf --bind 'zero:reload(echo $RANDOM)+clear-query'
+```
+
+### multi
+
+Triggered when the multi-selection has changed.
+
+### backward-eof
+
+Triggered when trying to delete backward while query is already empty.
+
+```bash
+fzf --bind backward-eof:abort
+```
+
+### jump
+
+Triggered when successfully jumped to target item in jump mode.
+
+```bash
+fzf --bind space:jump,jump:accept
+```
+
+### jump-cancel
+
+Triggered when jump mode is cancelled.
+
+```bash
+fzf --bind space:jump,jump:accept,jump-cancel:abort
+```
+
+### click-header
+
+Triggered when clicking within the header. Sets `FZF_CLICK_HEADER_LINE`, `FZF_CLICK_HEADER_COLUMN`, `FZF_CLICK_HEADER_WORD`, and `FZF_CLICK_HEADER_NTH` variables.
+
+```bash
+ps -ef | fzf --header-lines 1 --bind 'click-header:transform-nth(
+  echo $FZF_CLICK_HEADER_NTH
+)+transform-prompt(
+  echo "$FZF_CLICK_HEADER_WORD> "
+)'
+```
+
+### click-footer
+
+Triggered when clicking within the footer. Sets `FZF_CLICK_FOOTER_LINE`, `FZF_CLICK_FOOTER_COLUMN`, and `FZF_CLICK_FOOTER_WORD` variables.
+
+## Available actions
+
+Actions define what happens when a key is pressed or event is triggered.
+
+### Navigation actions
+
+<ResponseField name="up" type="action" default="ctrl-k, up">
+  Move cursor up.
+</ResponseField>
+
+<ResponseField name="down" type="action" default="ctrl-j, down">
+  Move cursor down.
+</ResponseField>
+
+<ResponseField name="up-match" type="action" default="ctrl-p, alt-up">
+  Move to the match above the cursor.
+</ResponseField>
+
+<ResponseField name="down-match" type="action" default="ctrl-n, alt-down">
+  Move to the match below the cursor.
+</ResponseField>
+
+<ResponseField name="first" type="action">
+  Move to the first match. Same as `pos(1)`.
+</ResponseField>
+
+<ResponseField name="last" type="action">
+  Move to the last match. Same as `pos(-1)`.
+</ResponseField>
+
+<ResponseField name="best" type="action">
+  Move to the best match. Same as `first` if raw mode is disabled.
+</ResponseField>
+
+<ResponseField name="pos(...)" type="action">
+  Move cursor to the numeric position. Negative numbers count from the end.
+  
+  ```bash
+  fzf --bind 'alt-5:pos(5)'
+  fzf --bind 'alt-l:pos(-1)'  # Go to last
+  ```
+</ResponseField>
+
+<ResponseField name="page-up" type="action" default="pgup">
+  Scroll up one page.
+</ResponseField>
+
+<ResponseField name="page-down" type="action" default="pgdn">
+  Scroll down one page.
+</ResponseField>
+
+<ResponseField name="half-page-up" type="action">
+  Scroll up half a page.
+</ResponseField>
+
+<ResponseField name="half-page-down" type="action">
+  Scroll down half a page.
+</ResponseField>
+
+<ResponseField name="offset-up" type="action">
+  Similar to CTRL-Y in Vim.
+</ResponseField>
+
+<ResponseField name="offset-down" type="action">
+  Similar to CTRL-E in Vim.
+</ResponseField>
+
+<ResponseField name="offset-middle" type="action">
+  Place the current item in the middle of the screen.
+</ResponseField>
+
+<ResponseField name="jump" type="action">
+  EasyMotion-like 2-keystroke movement.
+</ResponseField>
+
+<ResponseField name="jump-accept" type="action">
+  Jump and accept.
+</ResponseField>
+
+### Selection actions
+
+<ResponseField name="accept" type="action" default="enter, double-click">
+  Accept the current selection and exit.
+</ResponseField>
+
+<ResponseField name="accept-non-empty" type="action">
+  Same as `accept` but prevents exiting without selection.
+</ResponseField>
+
+<ResponseField name="accept-or-print-query" type="action">
+  Same as `accept` but prints the query when there's no match.
+</ResponseField>
+
+<ResponseField name="abort" type="action" default="ctrl-c, ctrl-g, ctrl-q, esc">
+  Exit fzf without selection.
+</ResponseField>
+
+<ResponseField name="cancel" type="action">
+  Clear query string if not empty, abort otherwise.
+</ResponseField>
+
+<ResponseField name="select" type="action">
+  Select the current item.
+</ResponseField>
+
+<ResponseField name="deselect" type="action">
+  Deselect the current item.
+</ResponseField>
+
+<ResponseField name="toggle" type="action" default="right-click">
+  Toggle selection of the current item.
+</ResponseField>
+
+<ResponseField name="select-all" type="action">
+  Select all matches.
+</ResponseField>
+
+<ResponseField name="deselect-all" type="action">
+  Deselect all matches.
+</ResponseField>
+
+<ResponseField name="toggle-all" type="action">
+  Toggle all matches.
+</ResponseField>
+
+<ResponseField name="toggle+down" type="action" default="ctrl-i (tab)">
+  Toggle current item and move down.
+</ResponseField>
+
+<ResponseField name="toggle+up" type="action" default="btab (shift-tab)">
+  Toggle current item and move up.
+</ResponseField>
+
+<ResponseField name="toggle-in" type="action">
+  `toggle+up` in reverse layout, `toggle+down` otherwise.
+</ResponseField>
+
+<ResponseField name="toggle-out" type="action">
+  `toggle+down` in reverse layout, `toggle+up` otherwise.
+</ResponseField>
+
+<ResponseField name="clear-multi" type="action">
+  Clear multi-selection.
+</ResponseField>
+
+### Input editing actions
+
+<ResponseField name="backward-char" type="action" default="ctrl-b, left">
+  Move cursor one character backward.
+</ResponseField>
+
+<ResponseField name="forward-char" type="action" default="ctrl-f, right">
+  Move cursor one character forward.
+</ResponseField>
+
+<ResponseField name="backward-word" type="action" default="alt-b, shift-left">
+  Move cursor one word backward.
+</ResponseField>
+
+<ResponseField name="forward-word" type="action" default="alt-f, shift-right">
+  Move cursor one word forward.
+</ResponseField>
+
+<ResponseField name="backward-subword" type="action">
+  Move cursor one subword backward.
+</ResponseField>
+
+<ResponseField name="forward-subword" type="action">
+  Move cursor one subword forward.
+</ResponseField>
+
+<ResponseField name="beginning-of-line" type="action" default="ctrl-a, home">
+  Move cursor to the beginning of line.
+</ResponseField>
+
+<ResponseField name="end-of-line" type="action" default="ctrl-e, end">
+  Move cursor to the end of line.
+</ResponseField>
+
+<ResponseField name="backward-delete-char" type="action" default="ctrl-h, ctrl-bspace, bspace">
+  Delete character backward.
+</ResponseField>
+
+<ResponseField name="backward-delete-char/eof" type="action">
+  Same as `backward-delete-char` but aborts if query is empty.
+</ResponseField>
+
+<ResponseField name="delete-char" type="action" default="del">
+  Delete character forward.
+</ResponseField>
+
+<ResponseField name="delete-char/eof" type="action" default="ctrl-d">
+  Same as `delete-char` but aborts if query is empty.
+</ResponseField>
+
+<ResponseField name="backward-kill-word" type="action" default="alt-bs">
+  Delete word backward.
+</ResponseField>
+
+<ResponseField name="backward-kill-subword" type="action">
+  Delete subword backward.
+</ResponseField>
+
+<ResponseField name="kill-word" type="action" default="alt-d">
+  Delete word forward.
+</ResponseField>
+
+<ResponseField name="kill-subword" type="action">
+  Delete subword forward.
+</ResponseField>
+
+<ResponseField name="kill-line" type="action">
+  Delete to the end of line.
+</ResponseField>
+
+<ResponseField name="unix-line-discard" type="action" default="ctrl-u">
+  Delete to the beginning of line.
+</ResponseField>
+
+<ResponseField name="unix-word-rubout" type="action" default="ctrl-w">
+  Delete word backward (Unix style).
+</ResponseField>
+
+<ResponseField name="yank" type="action" default="ctrl-y">
+  Yank (paste) killed text.
+</ResponseField>
+
+<ResponseField name="clear-query" type="action">
+  Clear query string.
+</ResponseField>
+
+<ResponseField name="replace-query" type="action">
+  Replace query string with current selection.
+</ResponseField>
+
+<ResponseField name="put" type="action">
+  Put the character to the prompt.
+</ResponseField>
+
+<ResponseField name="put(...)" type="action">
+  Put the given string to the prompt.
+</ResponseField>
+
+### Preview window actions
+
+<ResponseField name="preview(...)" type="action">
+  Execute preview command.
+  
+  ```bash
+  fzf --bind 'ctrl-v:preview(cat {})' --preview-window hidden
+  ```
+</ResponseField>
+
+<ResponseField name="show-preview" type="action">
+  Show preview window.
+</ResponseField>
+
+<ResponseField name="hide-preview" type="action">
+  Hide preview window.
+</ResponseField>
+
+<ResponseField name="toggle-preview" type="action">
+  Toggle preview window visibility.
+</ResponseField>
+
+<ResponseField name="toggle-preview-wrap" type="action">
+  Toggle preview window line wrap.
+</ResponseField>
+
+<ResponseField name="toggle-preview-wrap-word" type="action">
+  Toggle preview window word wrap.
+</ResponseField>
+
+<ResponseField name="preview-up" type="action" default="shift-up">
+  Scroll preview window up.
+</ResponseField>
+
+<ResponseField name="preview-down" type="action" default="shift-down">
+  Scroll preview window down.
+</ResponseField>
+
+<ResponseField name="preview-page-up" type="action">
+  Scroll preview window up one page.
+</ResponseField>
+
+<ResponseField name="preview-page-down" type="action">
+  Scroll preview window down one page.
+</ResponseField>
+
+<ResponseField name="preview-half-page-up" type="action">
+  Scroll preview window up half a page.
+</ResponseField>
+
+<ResponseField name="preview-half-page-down" type="action">
+  Scroll preview window down half a page.
+</ResponseField>
+
+<ResponseField name="preview-top" type="action">
+  Scroll to top of preview window.
+</ResponseField>
+
+<ResponseField name="preview-bottom" type="action">
+  Scroll to bottom of preview window.
+</ResponseField>
+
+<ResponseField name="refresh-preview" type="action">
+  Refresh preview content.
+</ResponseField>
+
+### State change actions
+
+<ResponseField name="change-prompt(...)" type="action">
+  Change prompt to the given string.
+  
+  ```bash
+  fzf --bind 'ctrl-p:change-prompt(NewPrompt> )'
+  ```
+</ResponseField>
+
+<ResponseField name="change-query(...)" type="action">
+  Change query string to the given string.
+</ResponseField>
+
+<ResponseField name="change-header(...)" type="action">
+  Change header to the given string.
+</ResponseField>
+
+<ResponseField name="change-footer(...)" type="action">
+  Change footer to the given string.
+</ResponseField>
+
+<ResponseField name="change-preview(...)" type="action">
+  Change `--preview` option.
+</ResponseField>
+
+<ResponseField name="change-preview-window(...)" type="action">
+  Change `--preview-window` option. Rotate through multiple option sets separated by `|`.
+</ResponseField>
+
+<ResponseField name="change-border-label(...)" type="action">
+  Change border label.
+</ResponseField>
+
+<ResponseField name="change-preview-label(...)" type="action">
+  Change preview window label.
+</ResponseField>
+
+<ResponseField name="change-list-label(...)" type="action">
+  Change list section label.
+</ResponseField>
+
+<ResponseField name="change-input-label(...)" type="action">
+  Change input section label.
+</ResponseField>
+
+<ResponseField name="change-header-label(...)" type="action">
+  Change header label.
+</ResponseField>
+
+<ResponseField name="change-footer-label(...)" type="action">
+  Change footer label.
+</ResponseField>
+
+<ResponseField name="change-ghost(...)" type="action">
+  Change ghost text.
+</ResponseField>
+
+<ResponseField name="change-pointer(...)" type="action">
+  Change pointer character.
+</ResponseField>
+
+<ResponseField name="change-multi" type="action">
+  Enable multi-select mode with no limit.
+</ResponseField>
+
+<ResponseField name="change-multi(...)" type="action">
+  Enable multi-select with a limit or disable with 0.
+</ResponseField>
+
+<ResponseField name="change-nth(...)" type="action">
+  Change `--nth` option. Rotate through options separated by `|`.
+</ResponseField>
+
+### External command actions
+
+<ResponseField name="execute(...)" type="action">
+  Execute external command without leaving fzf.
+  
+  ```bash
+  fzf --bind 'f1:execute(less -f {})'
+  ```
+</ResponseField>
+
+<ResponseField name="execute-silent(...)" type="action">
+  Execute command silently.
+  
+  ```bash
+  fzf --bind 'ctrl-y:execute-silent(echo {} | pbcopy)+abort'
+  ```
+</ResponseField>
+
+<ResponseField name="execute-multi(...)" type="action">
+  Execute command with all selected items.
+</ResponseField>
+
+<ResponseField name="become(...)" type="action">
+  Replace fzf process with the specified command.
+  
+  ```bash
+  fzf --bind 'enter:become(vim {})'
+  ```
+</ResponseField>
+
+<ResponseField name="reload(...)" type="action">
+  Reload candidate list with new command.
+  
+  ```bash
+  fzf --bind 'ctrl-r:reload(ps -ef)'
+  ```
+</ResponseField>
+
+<ResponseField name="reload-sync(...)" type="action">
+  Reload candidate list synchronously.
+</ResponseField>
+
+### Transform actions
+
+<ResponseField name="transform(...)" type="action">
+  Transform states using external command output.
+</ResponseField>
+
+<ResponseField name="transform-prompt(...)" type="action">
+  Transform prompt using external command.
+</ResponseField>
+
+<ResponseField name="transform-query(...)" type="action">
+  Transform query string using external command.
+</ResponseField>
+
+<ResponseField name="transform-header(...)" type="action">
+  Transform header using external command.
+</ResponseField>
+
+<ResponseField name="transform-border-label(...)" type="action">
+  Transform border label using external command.
+</ResponseField>
+
+<ResponseField name="transform-preview-label(...)" type="action">
+  Transform preview label using external command.
+</ResponseField>
+
+All `transform*` actions have `bg-transform*` variants that run in the background.
+
+### Toggle actions
+
+<ResponseField name="toggle-sort" type="action">
+  Toggle sorting.
+</ResponseField>
+
+<ResponseField name="toggle-search" type="action">
+  Toggle search functionality.
+</ResponseField>
+
+<ResponseField name="toggle-track" type="action">
+  Toggle global tracking option.
+</ResponseField>
+
+<ResponseField name="toggle-track-current" type="action">
+  Toggle tracking of the current item.
+</ResponseField>
+
+<ResponseField name="toggle-header" type="action">
+  Toggle header visibility.
+</ResponseField>
+
+<ResponseField name="toggle-input" type="action">
+  Toggle input section visibility.
+</ResponseField>
+
+<ResponseField name="toggle-wrap" type="action">
+  Toggle line wrap.
+</ResponseField>
+
+<ResponseField name="toggle-wrap-word" type="action" default="ctrl-/, alt-/">
+  Toggle word wrap.
+</ResponseField>
+
+<ResponseField name="toggle-multi-line" type="action">
+  Toggle multi-line display.
+</ResponseField>
+
+<ResponseField name="toggle-hscroll" type="action">
+  Toggle horizontal scroll.
+</ResponseField>
+
+<ResponseField name="toggle-raw" type="action">
+  Toggle raw mode.
+</ResponseField>
+
+### Other actions
+
+<ResponseField name="print-query" type="action">
+  Print query as first line of output.
+</ResponseField>
+
+<ResponseField name="print(...)" type="action">
+  Add string to output queue and print on normal exit.
+</ResponseField>
+
+<ResponseField name="search(...)" type="action">
+  Trigger fzf search with the given string.
+</ResponseField>
+
+<ResponseField name="clear-screen" type="action" default="ctrl-l">
+  Clear screen.
+</ResponseField>
+
+<ResponseField name="close" type="action">
+  Close preview window if open, abort otherwise.
+</ResponseField>
+
+<ResponseField name="unbind(...)" type="action">
+  Unbind bindings.
+  
+  ```bash
+  fzf --bind 'ctrl-d:unbind(ctrl-d)'
+  ```
+</ResponseField>
+
+<ResponseField name="rebind(...)" type="action">
+  Rebind bindings after `unbind`.
+</ResponseField>
+
+<ResponseField name="toggle-bind(...)" type="action">
+  Toggle bindings on/off.
+</ResponseField>
+
+<ResponseField name="trigger(...)" type="action">
+  Trigger actions bound to comma-separated list of keys and events.
+</ResponseField>
+
+<ResponseField name="bell" type="action">
+  Ring the terminal bell.
+</ResponseField>
+
+<ResponseField name="exclude" type="action">
+  Exclude current item from result.
+</ResponseField>
+
+<ResponseField name="exclude-multi" type="action">
+  Exclude selected items from result.
+</ResponseField>
+
+<ResponseField name="ignore" type="action">
+  Do nothing.
+</ResponseField>
+
+## Action composition
+
+You can chain multiple actions using the `+` separator:
+
+```bash
+fzf --multi --bind 'ctrl-a:select-all+accept'
+fzf --bind 'ctrl-r:clear-query+reload(ps -ef)'
+```
+
+<Note>
+  Any action after a terminal action (like `accept` or `abort`) is ignored.
+</Note>
+
+## Action arguments
+
+Actions with `(...)` take arguments. If arguments contain parentheses, use alternative notations:
+
+```bash
+action-name(...)  # Standard
+action-name[...]  # Alternative
+action-name{...}  # Alternative
+action-name<...>  # Alternative  
+action-name~...~  # Alternative
+```
+
+**Example:**
+
+```bash
+fzf --bind 'ctrl-o:execute(vim {})'
+fzf --bind 'ctrl-o:execute[vim {}]'  # Same thing
+```
+
+## Default key bindings
+
+fzf comes with these default key bindings:
+
+| Key | Action |
+|-----|--------|
+| `Enter` | `accept` |
+| `Ctrl-C`, `Ctrl-G`, `Ctrl-Q`, `Esc` | `abort` |
+| `Ctrl-J`, `Down` | `down` |
+| `Ctrl-K`, `Up` | `up` |
+| `Ctrl-N`, `Alt-Down` | `down-match` |
+| `Ctrl-P`, `Alt-Up` | `up-match` |
+| `Tab` | `toggle+down` |
+| `Shift-Tab` | `toggle+up` |
+| `Ctrl-A`, `Home` | `beginning-of-line` |
+| `Ctrl-E`, `End` | `end-of-line` |
+| `Ctrl-B`, `Left` | `backward-char` |
+| `Ctrl-F`, `Right` | `forward-char` |
+| `Alt-B`, `Shift-Left` | `backward-word` |
+| `Alt-F`, `Shift-Right` | `forward-word` |
+| `Ctrl-H`, `Ctrl-Bspace`, `Bspace` | `backward-delete-char` |
+| `Del` | `delete-char` |
+| `Ctrl-D` | `delete-char/eof` |
+| `Alt-BS` | `backward-kill-word` |
+| `Alt-D` | `kill-word` |
+| `Ctrl-U` | `unix-line-discard` |
+| `Ctrl-W` | `unix-word-rubout` |
+| `Ctrl-Y` | `yank` |
+| `Ctrl-L` | `clear-screen` |
+| `Ctrl-/`, `Alt-/` | `toggle-wrap-word` |
+| `PgUp` | `page-up` |
+| `PgDn` | `page-down` |
+| `Shift-Up` | `preview-up` |
+| `Shift-Down` | `preview-down` |
+| `Right-Click` | `toggle` |
+| `Double-Click` | `accept` |
+
+## Advanced examples
+
+### Multi-action binding
+
+```bash
+fzf --multi --bind 'ctrl-a:select-all+accept'
+```
+
+### Reload with query
+
+```bash
+fzf --bind 'change:reload:sleep 0.1; rg {q} || true' --disabled
+```
+
+### Interactive ripgrep
+
+```bash
+rg_prefix='rg --column --line-number --no-heading --color=always'
+: | fzf --bind 'start:reload:$rg_prefix ""' \
+        --bind 'change:reload:$rg_prefix {q} || true' \
+        --bind 'enter:become(vim {1} +{2})' \
+        --ansi --disabled
+```
+
+### Toggle preview
+
+```bash
+fzf --preview 'cat {}' \
+    --bind 'ctrl-/:change-preview-window(down|hidden|)'
+```
+
+### Dynamic labels
+
+```bash
+fzf --bind 'focus:transform-preview-label:echo [ {} ]' \
+    --preview 'cat {}'
+```
+
+### Copy to clipboard
+
+```bash
+fzf --bind 'ctrl-y:execute-silent(echo -n {} | pbcopy)+abort'
+```

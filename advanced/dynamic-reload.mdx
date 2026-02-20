@@ -1,0 +1,299 @@
+---
+title: Dynamic reloading
+description: Update the candidate list dynamically without restarting fzf using reload actions and event bindings
+---
+
+fzf can dynamically update the candidate list using the `reload` action. This lets you build interactive workflows where the list changes based on user input or key presses.
+
+## Basic reload action
+
+Bind the `reload` action to a key to update the list on demand:
+
+```bash
+(date; ps -ef) |
+  fzf --bind='ctrl-r:reload(date; ps -ef)' \
+      --header=$'Press CTRL-R to reload\n\n' --header-lines=2 \
+      --layout=reverse --height=80%
+```
+
+Pressing `CTRL-R` runs `date; ps -ef` again and updates the list with fresh data.
+
+### How it works
+
+<Steps>
+  <Step title="Initial command provides data">
+    The pipeline `(date; ps -ef)` provides the initial list of processes with a timestamp.
+  </Step>
+  
+  <Step title="User presses CTRL-R">
+    The `reload` action executes the command `date; ps -ef` again.
+  </Step>
+  
+  <Step title="fzf updates the list">
+    The new output replaces the current candidate list without restarting fzf.
+  </Step>
+  
+  <Step title="Selection is preserved">
+    fzf tries to maintain your cursor position based on the current selection.
+  </Step>
+</Steps>
+
+<Info>
+The `--header-lines=2` option prevents the first two lines (date and ps header) from being selectable.
+</Info>
+
+## Toggling between data sources
+
+You can set up multiple reload bindings to switch between different data sources:
+
+```bash
+find * | fzf --prompt 'All> ' \
+             --header 'CTRL-D: Directories / CTRL-F: Files' \
+             --bind 'ctrl-d:change-prompt(Directories> )+reload(find * -type d)' \
+             --bind 'ctrl-f:change-prompt(Files> )+reload(find * -type f)'
+```
+
+### Combining multiple actions
+
+Notice how we combine `change-prompt` and `reload` with `+`:
+
+- `change-prompt(Directories> )` - Updates the prompt text
+- `+` - Action separator
+- `reload(find * -type d)` - Reloads with new data
+
+This creates a seamless experience where the prompt reflects the current mode.
+
+<Tabs>
+  <Tab title="Initial state">
+    ```
+    All> _
+    ```
+    Shows all files and directories.
+  </Tab>
+  
+  <Tab title="After CTRL-D">
+    ```
+    Directories> _
+    ```
+    Shows only directories.
+  </Tab>
+  
+  <Tab title="After CTRL-F">
+    ```
+    Files> _
+    ```
+    Shows only files.
+  </Tab>
+</Tabs>
+
+## Single-key toggle with transform
+
+You can use a single key to toggle between modes using the `transform` action:
+
+```bash
+fd --type file |
+  fzf --prompt 'Files> ' \
+      --header 'CTRL-T: Switch between Files/Directories' \
+      --bind 'ctrl-t:transform:[[ ! $FZF_PROMPT =~ Files ]] &&
+              echo "change-prompt(Files> )+reload(fd --type file)" ||
+              echo "change-prompt(Directories> )+reload(fd --type directory)"' \
+      --preview '[[ $FZF_PROMPT =~ Files ]] && bat --color=always {} || tree -C {}'
+```
+
+### Understanding transform
+
+The `transform` action runs a shell command that outputs other actions:
+
+1. **Check current state** - Use `$FZF_PROMPT` to determine the current mode
+2. **Output actions** - Echo the actions you want to execute
+3. **fzf executes them** - fzf runs the actions returned by your script
+
+<CodeGroup>
+```bash Transform logic
+# If NOT in Files mode
+[[ ! $FZF_PROMPT =~ Files ]] &&
+  echo "change-prompt(Files> )+reload(fd --type file)"
+
+# If in Files mode (else case)
+||
+  echo "change-prompt(Directories> )+reload(fd --type directory)"
+```
+
+```bash Dynamic preview
+# Preview also changes based on mode
+[[ $FZF_PROMPT =~ Files ]] && bat --color=always {} || tree -C {}
+```
+</CodeGroup>
+
+<Tip>
+Store state in the prompt string and use `$FZF_PROMPT` to read it. This avoids needing external state files.
+</Tip>
+
+## Reload on change event
+
+Bind `reload` to the `change` event to update the list whenever the query changes:
+
+```bash
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+INITIAL_QUERY="${*:-}"
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --bind "start:reload:$RG_PREFIX {q}" \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --delimiter : \
+    --preview 'bat --color=always {1} --highlight-line {2}'
+```
+
+### Key concepts
+
+<Tabs>
+  <Tab title="start event">
+    ```bash
+    --bind "start:reload:$RG_PREFIX {q}"
+    ```
+    Runs immediately when fzf starts, loading initial results.
+  </Tab>
+  
+  <Tab title="change event">
+    ```bash
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true"
+    ```
+    Triggers whenever the query string changes (you type or delete).
+  </Tab>
+  
+  <Tab title="Debouncing">
+    ```bash
+    sleep 0.1
+    ```
+    Small delay reduces the number of intermediate reloads while typing.
+  </Tab>
+  
+  <Tab title="Error handling">
+    ```bash
+    || true
+    ```
+    Prevents warnings when the command finds no results.
+  </Tab>
+</Tabs>
+
+<Warning>
+`--disabled` disables fzf's fuzzy matching. All filtering is done by the reload command (ripgrep in this case).
+</Warning>
+
+## Advanced: Switching modes with rebind
+
+Use `rebind` and `unbind` to enable and disable reload behavior:
+
+```bash
+rm -f /tmp/rg-fzf-{r,f}
+RG_PREFIX="rg --column --line-number --no-heading --color=always --smart-case "
+INITIAL_QUERY="${*:-}"
+fzf --ansi --disabled --query "$INITIAL_QUERY" \
+    --bind "start:reload($RG_PREFIX {q})+unbind(ctrl-r)" \
+    --bind "change:reload:sleep 0.1; $RG_PREFIX {q} || true" \
+    --bind "ctrl-f:unbind(change,ctrl-f)+change-prompt(2. fzf> )+enable-search+rebind(ctrl-r)+transform-query(echo {q} > /tmp/rg-fzf-r; cat /tmp/rg-fzf-f)" \
+    --bind "ctrl-r:unbind(ctrl-r)+change-prompt(1. ripgrep> )+disable-search+reload($RG_PREFIX {q} || true)+rebind(change,ctrl-f)+transform-query(echo {q} > /tmp/rg-fzf-f; cat /tmp/rg-fzf-r)" \
+    --prompt '1. ripgrep> ' \
+    --delimiter : \
+    --header '╱ CTRL-R (ripgrep mode) ╱ CTRL-F (fzf mode) ╱'
+```
+
+### Breaking down the bindings
+
+<Steps>
+  <Step title="CTRL-F: Switch to fzf mode">
+    - `unbind(change,ctrl-f)` - Stop reloading on change, disable CTRL-F
+    - `change-prompt(2. fzf> )` - Update prompt
+    - `enable-search` - Turn on fzf fuzzy matching
+    - `rebind(ctrl-r)` - Enable CTRL-R to switch back
+    - `transform-query(...)` - Save and restore query
+  </Step>
+  
+  <Step title="CTRL-R: Switch to ripgrep mode">
+    - `unbind(ctrl-r)` - Disable CTRL-R in this mode
+    - `change-prompt(1. ripgrep> )` - Update prompt
+    - `disable-search` - Turn off fzf fuzzy matching
+    - `reload(...)` - Reload with current query
+    - `rebind(change,ctrl-f)` - Re-enable change reload and CTRL-F
+    - `transform-query(...)` - Save and restore query
+  </Step>
+  
+  <Step title="Query persistence">
+    Temp files store each mode's query separately, so switching modes preserves your previous search.
+  </Step>
+</Steps>
+
+<Info>
+This pattern is useful when you want both exact search (ripgrep) and fuzzy filtering (fzf) in the same interface.
+</Info>
+
+## Useful reload patterns
+
+### File system watching
+
+```bash
+find . | fzf --bind 'ctrl-r:reload(find .)' \
+             --header 'CTRL-R to refresh'
+```
+
+### Git status changes
+
+```bash
+git status --short | fzf --bind 'ctrl-r:reload(git status --short)' \
+                         --header 'CTRL-R to refresh git status'
+```
+
+### Process monitoring
+
+```bash
+ps aux | fzf --header-lines=1 \
+             --bind 'ctrl-r:reload(ps aux)' \
+             --bind 'enter:execute(kill -9 {2})' \
+             --header 'CTRL-R to refresh, Enter to kill'
+```
+
+### Docker containers
+
+```bash
+docker ps -a | fzf --header-lines=1 \
+                   --bind 'ctrl-r:reload(docker ps -a)' \
+                   --bind 'enter:execute(docker start {1})'
+```
+
+## Reload action modifiers
+
+You can chain additional actions after reload:
+
+```bash
+fzf --bind 'ctrl-r:reload(find .)+clear-query+first'
+```
+
+Common combinations:
+- `reload(...)+clear-query` - Reload and clear the search
+- `reload(...)+first` - Reload and jump to first item
+- `reload(...)+last` - Reload and jump to last item  
+- `reload(...)+select-all` - Reload and select all items
+
+<Tip>
+Chain actions with `+` to create complex, multi-step behaviors with a single key press.
+</Tip>
+
+## Performance considerations
+
+1. **Add debouncing** - Use `sleep` before expensive commands in `change:reload`
+2. **Cache when possible** - Store results that don't change frequently
+3. **Use `|| true`** - Prevent error messages for empty results
+4. **Limit output** - Use `head` or similar to cap the number of results
+
+```bash
+# Good: debounced, error-tolerant
+--bind "change:reload:sleep 0.1; expensive-command {q} | head -1000 || true"
+
+# Bad: immediate, can fail noisily
+--bind "change:reload:expensive-command {q}"
+```
+
+## Next steps
+
+- See [Ripgrep integration](/advanced/ripgrep-integration) for practical reload examples
+- Learn about [Executing programs](/advanced/executing-programs) to act on reloaded items
+- Explore [Performance](/advanced/performance) for optimization tips

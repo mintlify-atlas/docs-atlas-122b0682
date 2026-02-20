@@ -1,0 +1,268 @@
+---
+title: Search syntax
+description: Master fzf's powerful search syntax including fuzzy matching, exact matching, and logical operators
+---
+
+fzf uses an extended search syntax that allows you to precisely control how items are matched. By default, fzf runs in "extended-search mode" where you can combine multiple search terms and use special tokens.
+
+## Basic fuzzy matching
+
+Without any special characters, fzf performs fuzzy matching:
+
+```bash
+sbtrkt
+```
+
+This matches items that contain the characters `s`, `b`, `t`, `r`, `k`, `t` in that order, but not necessarily consecutively. For example, it would match "Subtrakt" or "Subtle Tract".
+
+## Search tokens
+
+You can use special tokens to refine your search:
+
+| Token | Match type | Description | Example |
+|-------|-----------|-------------|----------|
+| `sbtrkt` | fuzzy-match | Items that match `sbtrkt` | `sbtrkt` matches "Subtrakt" |
+| `'wild` | exact-match (quoted) | Items that include `wild` | `'wild` matches "wildcard" |
+| `'wild'` | exact-boundary-match | Items that include `wild` at word boundaries | `'wild'` matches "the wild" but not "wildcard" |
+| `^music` | prefix-exact-match | Items that start with `music` | `^music` matches "music.mp3" |
+| `.mp3$` | suffix-exact-match | Items that end with `.mp3` | `.mp3$` matches "song.mp3" |
+| `!fire` | inverse-exact-match | Items that do not include `fire` | `!fire` excludes "fire.txt" |
+| `!^music` | inverse-prefix-exact-match | Items that do not start with `music` | `!^music` excludes "music.mp3" |
+| `!.mp3$` | inverse-suffix-exact-match | Items that do not end with `.mp3` | `!.mp3$` excludes "song.mp3" |
+
+## Combining search terms
+
+You can combine multiple search terms with spaces. All terms must match (AND logic):
+
+```bash
+^music .mp3$ sbtrkt !fire
+```
+
+This searches for items that:
+- Start with "music"
+- End with ".mp3"
+- Contain the letters s, b, t, r, k, t in order
+- Do not contain "fire"
+
+## OR operator
+
+A single bar character `|` acts as an OR operator:
+
+```bash
+^core go$ | rb$ | py$
+```
+
+This matches entries that start with "core" and end with either "go", "rb", or "py".
+
+<Note>
+The OR operator has higher precedence than the implicit AND between space-separated terms.
+</Note>
+
+## Exact matching mode
+
+If you prefer exact (non-fuzzy) matching by default, use the `-e` or `--exact` option:
+
+```bash
+fzf --exact
+```
+
+In exact mode:
+- Regular terms require exact substring matching
+- The `'` prefix "unquotes" terms to enable fuzzy matching for that specific term
+
+```bash
+# In exact mode
+music      # Requires exact substring "music"
+'music     # Enables fuzzy matching for "music"
+```
+
+## Practical examples
+
+<Accordion title="Finding source files">
+  Search for JavaScript or TypeScript files in a src directory:
+  
+  ```bash
+  find . -type f | fzf --query "^src/ .js$ | .ts$"
+  ```
+</Accordion>
+
+<Accordion title="Filtering log files">
+  Find error lines that don't contain "warning":
+  
+  ```bash
+  cat app.log | fzf --query "error !warning"
+  ```
+</Accordion>
+
+<Accordion title="Git branch selection">
+  Find feature branches excluding main/master:
+  
+  ```bash
+  git branch | fzf --query "^feature !main !master"
+  ```
+</Accordion>
+
+<Accordion title="Package search">
+  Search for Python packages ending with "test" or "testing":
+  
+  ```bash
+  pip list | fzf --query "test$ | testing$"
+  ```
+</Accordion>
+
+## Search algorithms and schemes
+
+fzf provides different search schemes optimized for different types of input:
+
+<Tabs>
+  <Tab title="Default scheme">
+    ```bash
+    fzf --scheme=default
+    ```
+    
+    Generic scheme designed to work well with any kind of input.
+  </Tab>
+  <Tab title="Path scheme">
+    ```bash
+    fzf --scheme=path
+    ```
+    
+    Optimized for file paths. Gives higher priority to matches in file names vs. directory names.
+  </Tab>
+  <Tab title="History scheme">
+    ```bash
+    fzf --scheme=history
+    ```
+    
+    Suitable for command history or any input where chronological ordering is important.
+  </Tab>
+</Tabs>
+
+## Smart case sensitivity
+
+By default, fzf is case-insensitive. Use `--smart-case` to make searches case-sensitive only when the query contains uppercase letters:
+
+```bash
+fzf --smart-case
+```
+
+Examples with `--smart-case`:
+- `hello` matches "Hello", "HELLO", "hello"
+- `Hello` only matches "Hello" (case-sensitive)
+
+For explicit case sensitivity:
+
+<CodeGroup>
+
+```bash Case-sensitive
+fzf --case-sensitive
+# or
+fzf +i
+```
+
+```bash Case-insensitive
+fzf --ignore-case
+# or
+fzf -i
+```
+
+</CodeGroup>
+
+## Advanced search techniques
+
+### Multi-field matching
+
+Use `--delimiter` and `--nth` to search specific fields:
+
+```bash
+# Only search the filename (3rd field) in git grep output
+git grep -n . | fzf --delimiter : --nth 3
+```
+
+### Regular expression delimiters
+
+You can use regular expressions as delimiters, though simple string delimiters perform better:
+
+```bash
+# Split on any whitespace
+ps -ef | fzf --delimiter '[[:space:]]+' --nth 8
+```
+
+<Warning>
+Regular expression delimiters are slower than plain string delimiters. Use plain strings when possible for better performance.
+</Warning>
+
+### Transform display with --with-nth
+
+Show only specific fields in the list:
+
+```bash
+# Show only filename and line content, hide line numbers
+rg --line-number . | fzf --delimiter : --with-nth 1,3..
+```
+
+## Query history
+
+fzf can remember your search queries across sessions:
+
+```bash
+fzf --history ~/.fzf_history
+```
+
+Use CTRL-N and CTRL-P to navigate through previous queries.
+
+## Interactive query tips
+
+<Steps>
+
+### Start broad, then narrow
+
+Begin with a fuzzy search to see many results, then add exact-match tokens to narrow down.
+
+### Use prefix matching for structured data
+
+When searching structured data like logs or CSV files, use `^` to match specific columns.
+
+### Combine fuzzy and exact matching
+
+Mix fuzzy terms for flexibility with exact terms for precision:
+
+```bash
+sbtrkt 'exact phrase' !exclude
+```
+
+### Use OR for alternatives
+
+When you're unsure of the exact term, use OR to match multiple possibilities:
+
+```bash
+error | fail | exception
+```
+
+</Steps>
+
+## Example workflows
+
+<Accordion title="Finding files by extension and name pattern">
+  ```bash
+  fd . | fzf --query "^src/ .tsx$ | .ts$ component"
+  ```
+  
+  Finds TypeScript/TSX files in src directory with "component" in the name.
+</Accordion>
+
+<Accordion title="Filtering Docker containers">
+  ```bash
+  docker ps -a | fzf --query "!exited running"
+  ```
+  
+  Shows running containers, excluding exited ones.
+</Accordion>
+
+<Accordion title="Search git commits">
+  ```bash
+  git log --oneline | fzf --query "^fix: | ^feat: !wip"
+  ```
+  
+  Finds commits starting with "fix:" or "feat:" but excluding work-in-progress commits.
+</Accordion>

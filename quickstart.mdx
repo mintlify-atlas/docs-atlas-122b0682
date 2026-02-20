@@ -1,80 +1,422 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick start
+description: Get up and running with fzf in 5 minutes
 ---
 
-## Get started in three steps
+This guide will get you up and running with fzf in under 5 minutes. You'll learn how to perform basic searches, use shell integrations, and start building interactive workflows.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Make sure fzf is installed. If not, see the [Installation guide](/installation).
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+## Your first search
+
+<Steps>
+  <Step title="Launch fzf">
+    Run `fzf` without arguments to search files in the current directory:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```bash
+    fzf
+    ```
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    fzf will scan the current directory and display an interactive list.
+  </Step>
+  
+  <Step title="Type to search">
+    Start typing to filter the list. Try typing parts of a filename:
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    - Type `doc` to find files with "doc" in their name
+    - Type `md` to find Markdown files
+    - Type `src log` to find files matching both "src" and "log"
+    
+    The list updates instantly as you type.
+  </Step>
+  
+  <Step title="Navigate and select">
+    Use these keys to navigate:
+    
+    - `↑/↓` or `Ctrl-K/Ctrl-J` to move up/down
+    - `Enter` to select
+    - `Esc` or `Ctrl-C` to cancel
+    
+    Select a file and press Enter. fzf will print the filename to stdout.
+  </Step>
+  
+  <Step title="Open files with your editor">
+    Combine fzf with your editor:
+    
+    ```bash
+    vim $(fzf)
+    ```
+    
+    This opens the selected file in Vim. Works with any editor:
+    
+    ```bash
+    code $(fzf)    # VS Code
+    nano $(fzf)    # nano
+    emacs $(fzf)   # Emacs
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Shell integration
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Shell integration adds powerful key bindings to your shell. This is where fzf becomes truly powerful.
 
-### Step 3: Go live
+### Setup
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+<Tabs>
+  <Tab title="Bash">
+    Add this to your `~/.bashrc`:
+    
+    ```bash
+    # Set up fzf key bindings and fuzzy completion
+    eval "$(fzf --bash)"
+    ```
+    
+    Then reload your shell:
+    
+    ```bash
+    source ~/.bashrc
+    ```
+  </Tab>
+  
+  <Tab title="Zsh">
+    Add this to your `~/.zshrc`:
+    
+    ```zsh
+    # Set up fzf key bindings and fuzzy completion
+    source <(fzf --zsh)
+    ```
+    
+    Then reload your shell:
+    
+    ```zsh
+    source ~/.zshrc
+    ```
+  </Tab>
+  
+  <Tab title="Fish">
+    Add this to your `~/.config/fish/config.fish`:
+    
+    ```fish
+    # Set up fzf key bindings
+    fzf --fish | source
+    ```
+    
+    Then reload your shell:
+    
+    ```fish
+    source ~/.config/fish/config.fish
+    ```
+  </Tab>
+</Tabs>
+
+### Using the key bindings
+
+Once set up, you have three powerful key bindings:
+
+<Steps>
+  <Step title="CTRL-T: Find files">
+    Press `Ctrl-T` to search for files and directories:
+    
+    ```bash
+    # Type a command, then press Ctrl-T
+    vim [Ctrl-T]
+    
+    # Select a file, it gets inserted at cursor
+    vim src/main.go
+    ```
+    
+    This works anywhere on the command line. You can select multiple files with `Tab`.
+  </Step>
+  
+  <Step title="CTRL-R: Search command history">
+    Press `Ctrl-R` to search your command history:
+    
+    ```bash
+    # Press Ctrl-R
+    [Ctrl-R]
+    
+    # Type to search history
+    docker
+    
+    # Press Enter to insert the command
+    docker ps -a
+    ```
+    
+    <Tip>
+    Press `Ctrl-R` again while searching to toggle between sorting by relevance and chronological order.
+    </Tip>
+  </Step>
+  
+  <Step title="ALT-C: Change directory">
+    Press `Alt-C` to quickly navigate to any directory:
+    
+    ```bash
+    # Press Alt-C
+    [Alt-C]
+    
+    # Type to search directories
+    projects
+    
+    # Press Enter to cd into it
+    cd ~/projects/my-app
+    ```
+  </Step>
+</Steps>
+
+## Real-world examples
+
+### Kill a process interactively
+
+```bash
+# List processes, select one, and kill it
+ps aux | fzf | awk '{print $2}' | xargs kill
+```
+
+Or use the `become` action for a cleaner approach:
+
+```bash
+ps aux | fzf --bind 'enter:become(kill {2})'
+```
+
+### Search git commits
+
+```bash
+# Browse and preview git commits
+git log --oneline | fzf --preview 'git show {1}'
+```
+
+### Navigate directories with preview
+
+```bash
+# Find and cd into a directory
+cd $(find ~/projects -type d | fzf --preview 'ls -la {}')
+```
+
+## Search syntax
+
+fzf supports powerful search patterns:
+
+| Pattern | Meaning | Example |
+|---------|---------|---------|
+| `foo` | Fuzzy match | `fzf` matches "fuzzy finder" |
+| `'exact` | Exact match | `'main` matches only "main" |
+| `^start` | Prefix match | `^src` matches "src/main.go" |
+| `.go$` | Suffix match | `.go$` matches "main.go" |
+| `!exclude` | Inverse match | `!test` excludes files with "test" |
+| `foo bar` | AND match | Matches items with both "foo" and "bar" |
+| `foo | bar` | OR match | Matches items with "foo" or "bar" |
+
+<Info>
+Combine patterns: `^src .go$ !test` finds Go files in src/ excluding tests.
+</Info>
+
+## Display modes
+
+fzf has three display modes:
+
+<Tabs>
+  <Tab title="Fullscreen">
+    Default mode - takes the entire terminal:
+    
+    ```bash
+    fzf
+    ```
+  </Tab>
+  
+  <Tab title="Height mode">
+    Opens below the cursor with specified height:
+    
+    ```bash
+    fzf --height 40%
+    fzf --height 40% --layout reverse --border
+    ```
+    
+    Great for inline use without clearing the screen.
+  </Tab>
+  
+  <Tab title="Tmux popup">
+    Opens in a tmux popup window (requires tmux 3.2+):
+    
+    ```bash
+    fzf --tmux 80%
+    fzf --tmux center,80%,60%
+    ```
+    
+    Automatically falls back to `--height` mode outside tmux.
+  </Tab>
+</Tabs>
+
+<Tip>
+Set your preferred mode as default:
+
+```bash
+export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border'
+```
+</Tip>
+
+## Multi-select
+
+Enable multi-select mode with `-m`:
+
+```bash
+# Select multiple files with Tab/Shift-Tab
+find . -type f | fzf -m
+
+# Delete multiple files
+find . -type f | fzf -m | xargs rm
+
+# Open multiple files in vim
+vim $(find . -type f | fzf -m)
+```
+
+**Keys:**
+- `Tab` - Mark/unmark item
+- `Shift-Tab` - Unmark item
+- `Enter` - Accept selection
+
+## Preview window
+
+Add a preview window to see file contents:
+
+```bash
+# Preview files with cat
+fzf --preview 'cat {}'
+
+# Better: use bat for syntax highlighting
+fzf --preview 'bat --color=always {}'
+
+# Preview with line numbers
+fzf --preview 'bat --style=numbers --color=always {}'
+```
+
+<Tip>
+If you have [bat](https://github.com/sharkdp/bat) installed, add this to your shell config:
+
+```bash
+export FZF_DEFAULT_OPTS="--preview 'bat --style=numbers --color=always {}' --preview-window right:60%"
+```
+</Tip>
+
+## Essential options
+
+Common options to get started:
+
+```bash
+# Query: start with an initial search term
+fzf --query "search term"
+
+# Multi-select mode
+fzf -m
+
+# Height mode with border
+fzf --height 40% --border
+
+# Reverse layout (search prompt at top)
+fzf --layout reverse
+
+# Preview window
+fzf --preview 'cat {}'
+
+# Case-insensitive by default, smart-case enabled
+fzf -i  # case-insensitive
+fzf +i  # case-sensitive
+```
+
+## Combining it all together
+
+Here's a practical example that combines multiple features:
+
+```bash
+# Interactive file browser with preview
+fzf --height 60% \
+    --layout reverse \
+    --border \
+    --preview 'bat --style=numbers --color=always {}' \
+    --preview-window right:60% \
+    --bind 'enter:become(vim {})' \
+    --bind 'ctrl-/:change-preview-window(hidden|)' \
+    --header 'ENTER: open in vim | CTRL-/: toggle preview'
+```
+
+This creates an interactive file browser where:
+- `Enter` opens the file in Vim
+- `Ctrl-/` toggles the preview window
+- Files are displayed with syntax highlighting
+
+## Building interactive scripts
+
+You can build powerful scripts by piping data through fzf:
+
+```bash
+#!/bin/bash
+# Git branch switcher
+
+branch=$(git branch --all | 
+         fzf --preview 'git log --oneline --color=always {1}' |
+         sed 's/^[* ]*//' |
+         sed 's/^remotes\/origin\///')
+
+if [ -n "$branch" ]; then
+    git checkout "$branch"
+fi
+```
+
+<Note>
+The `become` action provides a cleaner way to execute commands:
+
+```bash
+git branch --all | fzf --bind 'enter:become(git checkout {1})'
+```
+</Note>
+
+## Quick reference
+
+### Navigation keys
+
+| Key | Action |
+|-----|--------|
+| `↑/↓`, `Ctrl-K/J`, `Ctrl-P/N` | Move cursor up/down |
+| `Enter` | Select item |
+| `Esc`, `Ctrl-C`, `Ctrl-G` | Exit |
+| `Tab` | Mark item (multi-select) |
+| `Shift-Tab` | Unmark item |
+
+### Shell integration keys
+
+| Key | Action |
+|-----|--------|
+| `Ctrl-T` | Paste selected files |
+| `Ctrl-R` | Paste command from history |
+| `Alt-C` | cd into selected directory |
+
+### Common options
+
+| Option | Description |
+|--------|-------------|
+| `--query "text"` | Start with initial query |
+| `-m, --multi` | Enable multi-select |
+| `--height N%` | Height mode |
+| `--layout reverse` | Reverse layout |
+| `--border` | Show border |
+| `--preview "cmd"` | Preview command |
+| `--bind "key:action"` | Custom key binding |
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Usage guide" icon="book" href="/usage/basic-usage">
+    Learn about display modes, search syntax, and key bindings
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/environment-variables">
+    Customize fzf with environment variables and options
+  </Card>
+  <Card title="Integrations" icon="plug" href="/integrations/shell-integration">
+    Set up shell integration, Vim plugin, and tmux
+  </Card>
+  <Card title="Advanced topics" icon="graduation-cap" href="/advanced/overview">
+    Master ripgrep integration, dynamic reloading, and more
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

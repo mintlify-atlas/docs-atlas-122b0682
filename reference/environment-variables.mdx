@@ -1,0 +1,440 @@
+---
+title: Environment variables
+description: Environment variables that control fzf behavior and are exported to child processes
+---
+
+fzf uses environment variables for configuration and exports variables to child processes for dynamic behavior.
+
+## Configuration variables
+
+These variables control fzf's default behavior.
+
+### FZF_DEFAULT_COMMAND
+
+Default command to use when input is a TTY device.
+
+```bash
+export FZF_DEFAULT_COMMAND='fd --type f'
+```
+
+<Note>
+  On Unix systems, fzf runs the command with `$SHELL -c` if `SHELL` is set, otherwise with `sh -c`. Make sure the command is POSIX-compliant.
+</Note>
+
+**Example with fd:**
+
+```bash
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix'
+```
+
+**Example with ripgrep:**
+
+```bash
+export FZF_DEFAULT_COMMAND='rg --files'
+```
+
+**Example with find:**
+
+```bash
+export FZF_DEFAULT_COMMAND='find . -type f'
+```
+
+### FZF_DEFAULT_OPTS
+
+Default options applied to all fzf invocations.
+
+```bash
+export FZF_DEFAULT_OPTS="--layout=reverse --border --cycle"
+```
+
+**Common configurations:**
+
+```bash
+# Better layout with preview
+export FZF_DEFAULT_OPTS="
+  --height 40% --tmux bottom,40% --layout reverse --border top
+  --preview 'bat --color=always --style=numbers --line-range=:500 {}'
+"
+
+# Minimal interface
+export FZF_DEFAULT_OPTS="--style=minimal --no-info"
+
+# Full interface with all borders
+export FZF_DEFAULT_OPTS="--style=full --border=rounded --padding=1"
+```
+
+### FZF_DEFAULT_OPTS_FILE
+
+Location of a file containing default options.
+
+```bash
+export FZF_DEFAULT_OPTS_FILE=~/.fzfrc
+```
+
+**Example `.fzfrc` file:**
+
+```text
+--layout=reverse
+--border
+--height=40%
+--preview='bat --color=always --style=numbers {}'
+--preview-window='right:50%:wrap'
+--bind='ctrl-/:toggle-preview'
+--bind='ctrl-a:select-all'
+--color='dark,fg:252,bg:237,hl:65'
+```
+
+### FZF_API_KEY
+
+API key required for HTTP server authentication when using `--listen` option.
+
+```bash
+export FZF_API_KEY="$(head -c 32 /dev/urandom | base64)"
+fzf --listen 0.0.0.0:6266
+```
+
+<Warning>
+  Set `FZF_API_KEY` when listening on non-localhost addresses to protect against DNS rebinding and privilege escalation attacks.
+</Warning>
+
+**Using the API key:**
+
+```bash
+curl -XPOST localhost:6266 \
+  -H "x-api-key: $FZF_API_KEY" \
+  -d 'change-query(hello)'
+```
+
+## Shell integration variables
+
+These variables customize shell integration behavior.
+
+<Note>
+  `FZF_DEFAULT_COMMAND` is not used by shell integration due to different requirements. Each integration uses its own command variable.
+</Note>
+
+### CTRL-T integration
+
+**FZF_CTRL_T_COMMAND**
+
+Command to generate the list of files and directories for CTRL-T.
+
+```bash
+export FZF_CTRL_T_COMMAND='fd --type f --hidden --follow --exclude .git'
+```
+
+**FZF_CTRL_T_OPTS**
+
+Additional fzf options for CTRL-T.
+
+```bash
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'
+"
+```
+
+### CTRL-R integration
+
+**FZF_CTRL_R_OPTS**
+
+Additional fzf options for CTRL-R (command history).
+
+```bash
+export FZF_CTRL_R_OPTS="
+  --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+  --color header:italic
+  --header 'Press CTRL-Y to copy command into clipboard'
+"
+```
+
+<Info>
+  CTRL-R does not support custom `FZF_CTRL_R_COMMAND`. You can press CTRL-R again to toggle sorting by relevance.
+</Info>
+
+### ALT-C integration
+
+**FZF_ALT_C_COMMAND**
+
+Command to generate the list of directories for ALT-C.
+
+```bash
+export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
+```
+
+**FZF_ALT_C_OPTS**
+
+Additional fzf options for ALT-C.
+
+```bash
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {}'
+"
+```
+
+### Completion customization
+
+**FZF_COMPLETION_TRIGGER**
+
+Trigger sequence for fuzzy completion (default: `**`).
+
+```bash
+export FZF_COMPLETION_TRIGGER='~~'
+```
+
+**FZF_COMPLETION_OPTS**
+
+Options for all completion types.
+
+```bash
+export FZF_COMPLETION_OPTS='--border --info=inline'
+```
+
+**FZF_COMPLETION_PATH_OPTS**
+
+Options for path completion (e.g., `vim **<TAB>`).
+
+```bash
+export FZF_COMPLETION_PATH_OPTS='--walker file,dir,follow,hidden'
+```
+
+**FZF_COMPLETION_DIR_OPTS**
+
+Options for directory completion (e.g., `cd **<TAB>`).
+
+```bash
+export FZF_COMPLETION_DIR_OPTS='--walker dir,follow'
+```
+
+## Variables exported to child processes
+
+fzf exports these variables to child processes (preview commands, actions, etc.).
+
+### Core variables
+
+<ResponseField name="FZF_LINES" type="number">
+  Number of lines fzf takes up excluding padding and margin.
+</ResponseField>
+
+<ResponseField name="FZF_COLUMNS" type="number">
+  Number of columns fzf takes up excluding padding and margin.
+</ResponseField>
+
+<ResponseField name="FZF_DIRECTION" type="string">
+  Direction of the list: `up` or `down`.
+</ResponseField>
+
+<ResponseField name="FZF_TOTAL_COUNT" type="number">
+  Total number of items in the input.
+</ResponseField>
+
+<ResponseField name="FZF_MATCH_COUNT" type="number">
+  Number of matched items.
+</ResponseField>
+
+<ResponseField name="FZF_SELECT_COUNT" type="number">
+  Number of selected items.
+</ResponseField>
+
+<ResponseField name="FZF_POS" type="number">
+  Vertical position of the cursor in the list starting from 1.
+</ResponseField>
+
+### Query and input state
+
+<ResponseField name="FZF_QUERY" type="string">
+  Current query string.
+</ResponseField>
+
+<ResponseField name="FZF_INPUT_STATE" type="string">
+  Current input state: `enabled`, `disabled`, or `hidden`.
+</ResponseField>
+
+<ResponseField name="FZF_NTH" type="string">
+  Current `--nth` option value.
+</ResponseField>
+
+<ResponseField name="FZF_WRAP" type="string">
+  Line wrapping mode when enabled: `char` or `word`.
+</ResponseField>
+
+### Display elements
+
+<ResponseField name="FZF_PROMPT" type="string">
+  Current prompt string.
+</ResponseField>
+
+<ResponseField name="FZF_GHOST" type="string">
+  Current ghost text.
+</ResponseField>
+
+<ResponseField name="FZF_POINTER" type="string">
+  Current pointer string.
+</ResponseField>
+
+### Labels
+
+<ResponseField name="FZF_PREVIEW_LABEL" type="string">
+  Preview window label string.
+</ResponseField>
+
+<ResponseField name="FZF_BORDER_LABEL" type="string">
+  Border label string.
+</ResponseField>
+
+<ResponseField name="FZF_LIST_LABEL" type="string">
+  List section label string.
+</ResponseField>
+
+<ResponseField name="FZF_INPUT_LABEL" type="string">
+  Input section label string.
+</ResponseField>
+
+<ResponseField name="FZF_HEADER_LABEL" type="string">
+  Header label string.
+</ResponseField>
+
+<ResponseField name="FZF_FOOTER_LABEL" type="string">
+  Footer label string.
+</ResponseField>
+
+### Action context
+
+<ResponseField name="FZF_ACTION" type="string">
+  Name of the last action performed.
+</ResponseField>
+
+<ResponseField name="FZF_KEY" type="string">
+  Name of the last key pressed.
+</ResponseField>
+
+### Server variables
+
+<ResponseField name="FZF_PORT" type="number">
+  Port number when `--listen` option is used with a TCP port.
+</ResponseField>
+
+<ResponseField name="FZF_SOCK" type="string">
+  Unix socket path when `--listen` option is used with a socket.
+</ResponseField>
+
+### Preview window
+
+<ResponseField name="FZF_PREVIEW_TOP" type="number">
+  Top position of the preview window.
+</ResponseField>
+
+<ResponseField name="FZF_PREVIEW_LEFT" type="number">
+  Left position of the preview window.
+</ResponseField>
+
+<ResponseField name="FZF_PREVIEW_LINES" type="number">
+  Number of lines in the preview window.
+</ResponseField>
+
+<ResponseField name="FZF_PREVIEW_COLUMNS" type="number">
+  Number of columns in the preview window.
+</ResponseField>
+
+<Note>
+  fzf also sets `$LINES` and `$COLUMNS` with the same values as `$FZF_PREVIEW_LINES` and `$FZF_PREVIEW_COLUMNS`, but prefer the `FZF_PREVIEW_` versions as the others can be reset by the shell.
+</Note>
+
+### Raw mode
+
+<ResponseField name="FZF_RAW" type="string">
+  Only available in raw mode. `1` if the current item matches, `0` otherwise.
+</ResponseField>
+
+### Click events
+
+<ResponseField name="FZF_CLICK_HEADER_LINE" type="number">
+  Line number clicked in header (available in `click-header` event).
+</ResponseField>
+
+<ResponseField name="FZF_CLICK_HEADER_COLUMN" type="number">
+  Column number clicked in header (available in `click-header` event).
+</ResponseField>
+
+<ResponseField name="FZF_CLICK_HEADER_WORD" type="string">
+  Word clicked in header if applicable (available in `click-header` event).
+</ResponseField>
+
+<ResponseField name="FZF_CLICK_HEADER_NTH" type="string">
+  Field index of clicked word (available in `click-header` event).
+</ResponseField>
+
+<ResponseField name="FZF_CLICK_FOOTER_LINE" type="number">
+  Line number clicked in footer (available in `click-footer` event).
+</ResponseField>
+
+<ResponseField name="FZF_CLICK_FOOTER_COLUMN" type="number">
+  Column number clicked in footer (available in `click-footer` event).
+</ResponseField>
+
+<ResponseField name="FZF_CLICK_FOOTER_WORD" type="string">
+  Word clicked in footer if applicable (available in `click-footer` event).
+</ResponseField>
+
+## Example configurations
+
+### Complete shell integration setup
+
+```bash
+# Use fd for faster file traversal
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+
+# Apply to CTRL-T as well
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+# Default options
+export FZF_DEFAULT_OPTS="
+  --height 40%
+  --tmux bottom,40%
+  --layout reverse
+  --border top
+  --multi
+  --info inline
+  --bind 'ctrl-/:toggle-preview'
+  --bind 'ctrl-a:select-all'
+  --bind 'ctrl-y:execute-silent(echo -n {+} | pbcopy)'
+  --color 'fg:#bbccdd,fg+:#ddeeff,bg:#334455,preview-bg:#223344'
+"
+
+# CTRL-T options
+export FZF_CTRL_T_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'bat -n --color=always {}'
+  --bind 'ctrl-/:change-preview-window(down|hidden|)'
+"
+
+# CTRL-R options
+export FZF_CTRL_R_OPTS="
+  --preview 'echo {}'
+  --preview-window up:3:hidden:wrap
+  --bind 'ctrl-/:toggle-preview'
+  --bind 'ctrl-y:execute-silent(echo -n {2..} | pbcopy)+abort'
+"
+
+# ALT-C options
+export FZF_ALT_C_OPTS="
+  --walker-skip .git,node_modules,target
+  --preview 'tree -C {} | head -200'
+"
+```
+
+### Dynamic preview with environment variables
+
+```bash
+fzf --preview 'echo "Position: $FZF_POS/$FZF_MATCH_COUNT"' \
+    --preview 'echo "Query: $FZF_QUERY"' \
+    --preview 'cat {}'
+```
+
+### Info command using environment variables
+
+```bash
+fzf --info-command='printf "\x1b[33;1m$FZF_POS\x1b[m/$FZF_INFO 💛"'
+```
