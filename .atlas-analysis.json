@@ -1,0 +1,118 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "fzf",
+  "projectDescription": "A command-line fuzzy finder for interactive filtering and selection",
+  "theme": "aspen",
+  "primaryColor": "#98bc99",
+  "lightColor": "#d9d9d9",
+  "darkColor": "#3f3f3f",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart",
+              "upgrading"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "usage/basic-usage",
+              "usage/display-modes",
+              "usage/search-syntax",
+              "usage/key-bindings",
+              "usage/fuzzy-completion"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/customization",
+              "configuration/color-schemes"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/shell-integration",
+              "integrations/vim-plugin",
+              "integrations/tmux"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/overview",
+              "advanced/ripgrep-integration",
+              "advanced/preview-window",
+              "advanced/dynamic-reload",
+              "advanced/executing-programs",
+              "advanced/performance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Command Reference",
+            "pages": [
+              "reference/command-options",
+              "reference/environment-variables",
+              "reference/key-bindings"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "reference/troubleshooting",
+              "reference/examples",
+              "reference/faq"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Fast fuzzy matching algorithm",
+    "Interactive filtering interface",
+    "Shell integration (bash, zsh, fish)",
+    "Vim/Neovim plugin support",
+    "Preview window with ANSI color support",
+    "Dynamic list reloading",
+    "Extensive customization options",
+    "Multiple display modes (fullscreen, height, tmux popup)",
+    "Ripgrep integration for code searching",
+    "Key bindings and fuzzy completion"
+  ],
+  "publicApiSurface": [
+    "fzf (main command)",
+    "--query (initial query string)",
+    "--height (display height)",
+    "--tmux (tmux popup mode)",
+    "--preview (preview command)",
+    "--bind (key bindings)",
+    "--color (color customization)",
+    "--multi (multi-select mode)",
+    "--ansi (ANSI color support)",
+    "--exact (exact match mode)",
+    "--delimiter (field delimiter)",
+    "--nth (field index)",
+    "--with-nth (field transform)",
+    "--scheme (matching scheme)",
+    "FZF_DEFAULT_COMMAND (environment variable)",
+    "FZF_DEFAULT_OPTS (environment variable)",
+    "FZF_CTRL_T_COMMAND (environment variable)",
+    "FZF_CTRL_R_OPTS (environment variable)",
+    "FZF_ALT_C_COMMAND (environment variable)"
+  ]
+}
